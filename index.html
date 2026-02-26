@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<!-- ODE TO PILATES v1.6 | 2026-02-27 -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="robots" content="noindex,nofollow">
+<title>ODE TO PILATES</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#F0E6DE;overflow-x:hidden;font-family:'Noto Sans KR',sans-serif}
+input,select,textarea,button{font-family:'Noto Sans KR',sans-serif;font-size:14px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#C49A87;border-radius:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes slideR{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:translateX(0)}}
+@keyframes stampHit{0%{transform:scale(0) rotate(-20deg);opacity:0}55%{transform:scale(1.35) rotate(5deg);opacity:1}80%{transform:scale(.95) rotate(-1deg)}100%{transform:scale(1.08) rotate(0)}}
+@keyframes stampNS{0%{transform:scale(0) rotate(10deg);opacity:0}60%{transform:scale(1.3) rotate(-3deg)}100%{transform:scale(1.08) rotate(0)}}
+@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes dotPulse{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@media(min-width:600px){.app-wrap{max-width:800px!important}.sig-canvas{height:260px!important}}
+@media(min-width:900px){.app-wrap{max-width:960px!important}.sig-canvas{height:300px!important}}
+@media(orientation:landscape) and (min-width:600px){.sig-canvas{height:220px!important}.sig-wrap{max-width:600px;margin:0 auto}}
+.app-wrap{max-width:720px;margin:0 auto}
+.dark-mode input,.dark-mode select,.dark-mode textarea{background:#FFF!important;color:#222!important;border-color:#CCC!important}
+.dark-mode input::placeholder,.dark-mode textarea::placeholder{color:#999!important}
+.af{animation:fadeUp .4s ease both}.as{animation:scaleIn .35s ease both}.ar{animation:slideR .35s ease both}
+.btn{position:relative;overflow:hidden;cursor:pointer;border:none;outline:none;transition:transform .12s ease}.btn:active{transform:scale(.94)!important}
+.card-act{transition:transform .12s ease;cursor:pointer}.card-act:active{transform:scale(.97)}
+.dot-loading{display:inline-flex;gap:4px;align-items:center}.dot-loading span{width:6px;height:6px;border-radius:50%;background:#A47764;animation:dotPulse 1.2s infinite ease-in-out}.dot-loading span:nth-child(2){animation-delay:.15s}.dot-loading span:nth-child(3){animation-delay:.3s}
+.spinner{width:32px;height:32px;border:3px solid #E0CBBD;border-top-color:#A47764;border-radius:50%;animation:spin .7s linear infinite}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef,useCallback,useMemo}=React;
+const PIN="1234!";
+const GS="https://script.google.com/macros/s/AKfycbx2DwNc8NT4jCCX8Jh1dtfMycKVnvIe7pSfJQ4lJ0MSyGo309ayYwN734ErzRJcMudz/exec";
+const DK=["일","월","화","수","목","금","토"],WD=["월","화","수","목","금","토","일"];
+const MCOL=["#A47764","#C0392B","#D35400","#E67E22","#F1C40F","#27AE60","#2980B9","#8E44AD","#2C3E50","#16A085","#E74C3C","#3498DB"];
+const ROOMS=["","A","B"];
+const HOURS=["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"];
+const fmt=s=>{if(!s)return"-";const d=new Date(s);return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")} (${DK[d.getDay()]})`};
+const fmtShort=s=>{if(!s)return"-";const d=new Date(s);return`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`};
+const fmtS=s=>{if(!s)return"-";const d=new Date(s);return`${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`};
+const fmtT=s=>{if(!s)return"";const d=new Date(s);return`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`};
+const td=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const isExp=dt=>dt&&new Date(dt)<new Date(td());
+const dLeft=dt=>{if(!dt)return null;return Math.ceil((new Date(dt)-new Date(td()))/86400000)};
+const vW=(t,f)=>{if(f<=0)f=1;if(f>2)f=2;return Math.ceil(t/f)+1};
+const HOLD_WEEKS=(t)=>t>=24?3:t>=16?2:1;
+const cExp=(first,tot,wD,pD=0)=>{if(!first)return null;const f=wD?.length||1;const w=vW(tot,f);const d=new Date(first);d.setDate(d.getDate()+w*7+(pD||0));return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const CL={pri:"#A47764",priD:"#7D5A4A",priL:"#C49A87",priP:"#F5EDE8",priPP:"#FAF6F3",card:"#FFF",bdr:"#E0CBBD",txt:"#3D2B22",txtM:"#6B5548",txtL:"#9C8578",danger:"#C0392B",dangerBg:"#FDEDEB",warn:"#D4880F",warnBg:"#FEF6E7",pauseBg:"#F0ECE8",pauseTxt:"#9C8578",noshow:"#C0392B",noshowBg:"#FDEDEB",inst:"#5B7B6D",instBg:"#EDF4F0",ok:"#27ae60",okBg:"#eafaf1",stamp:"#8B2F3A",stampNS:"#999",roomA:"#2980B9",roomB:"#8E44AD",bg:"linear-gradient(180deg,#FAF6F3 0%,#F0E6DE 50%,#E8DDD4 100%)"};
+const CD={pri:"#555",priD:"#333",priL:"#999",priP:"#F0F0F0",priPP:"#F8F8F8",card:"#FFF",bdr:"#DDD",txt:"#222",txtM:"#555",txtL:"#888",danger:"#D32F2F",dangerBg:"#FDEAEA",warn:"#E65100",warnBg:"#FFF3E0",pauseBg:"#F5F5F5",pauseTxt:"#777",noshow:"#D32F2F",noshowBg:"#FDEAEA",inst:"#444",instBg:"#F0F0F0",ok:"#388E3C",okBg:"#E8F5E9",stamp:"#333",stampNS:"#AAA",roomA:"#1565C0",roomB:"#6A1B9A",bg:"#FFFFFF"};
+let C=CL;
+const SURVEY_Q=[
+  {id:"purpose",title:"운동 목적",multi:true,options:["체형 교정","통증 완화 / 재활","다이어트 / 체지방 감소","근력 강화","자세 개선","스트레스 해소","산전 / 산후 관리","유연성 향상","체력 증진","골반 교정","어깨·목 관리","허리 강화"]},
+  {id:"experience",title:"필라테스 경험",multi:false,options:["처음이에요","6개월 미만","6개월~1년","1~2년","2년 이상","그룹 수업만","개인 수업만","기구+매트 혼합"]},
+  {id:"fitness",title:"운동 경험 수준",multi:false,options:["거의 없음","가끔 운동함","주 1~2회","주 3~4회","매일 운동"]},
+  {id:"otherExercise",title:"현재 하는 다른 운동",multi:true,options:["없음","헬스/웨이트","요가","수영","달리기/조깅","골프","테니스/배드민턴","등산","홈트레이닝","스트레칭"]},
+  {id:"pain",title:"불편한 부위",multi:true,options:["목","어깨(좌)","어깨(우)","등(상부)","등(하부)","허리","골반","고관절","무릎(좌)","무릎(우)","발목","손목","팔꿈치","없음"]},
+  {id:"painLevel",title:"통증 정도",multi:false,options:["불편함 없음","가끔 불편함","자주 통증 있음","일상생활 지장","치료 중"]},
+  {id:"painWhen",title:"통증 발생 시기",multi:true,options:["해당없음","아침에 심함","오래 앉으면","오래 서면","운동 중","운동 후","수면 중","특정 동작 시"]},
+  {id:"condition",title:"진단 이력",multi:true,options:["목 디스크","허리 디스크","척추측만","거북목/일자목","어깨 충돌증후군","무릎 관절","고관절 이상","족저근막염","수술 이력","골절 이력","없음"]},
+  {id:"caution",title:"운동 주의 사항",multi:true,options:["없음","임신","산후 6개월 이내","산후 6개월~1년","고혈압","저혈압","골다공증","당뇨","심장 질환","천식","빈혈"]},
+  {id:"medication",title:"복용 중인 약",multi:false,options:["없음","진통제","혈압약","당뇨약","호르몬제","수면제","기타"]},
+  {id:"lifestyle",title:"일상 활동 패턴",multi:false,options:["오래 앉아 있음(사무직)","오래 서 있음(서비스직)","활동량 많음(육체노동)","불규칙함","재택근무","학생","주부"]},
+  {id:"posture",title:"자세 습관",multi:true,options:["다리 꼬기","짝다리","스마트폰 고개 숙임","한쪽 어깨로 가방","턱 괴기","엎드려 자기","한쪽으로 눕기","양반다리","잘 모르겠음"]},
+  {id:"bodyType",title:"체형 특성 (강사 관찰)",multi:true,options:["일자목","거북목","라운드 숄더","굽은 등(흉추 후만)","과전만(요추)","골반 전방 경사","골반 후방 경사","골반 좌우 비대칭","O다리","X다리","평발","정상"]},
+  {id:"flexibility",title:"유연성 수준",multi:false,options:["매우 뻣뻣함","약간 뻣뻣함","보통","유연한 편","과유연"]},
+  {id:"coreStrength",title:"코어 안정성 (강사 평가)",multi:false,options:["매우 약함","약한 편","보통","양호","우수"]},
+  {id:"intensity",title:"선호 수업 강도",multi:false,options:["아주 부드럽게","기본","조금 힘들게","강하게","강사에게 맡김"]},
+  {id:"priority",title:"수업에서 중요한 것",multi:true,options:["정확한 동작 설명","자세 교정","운동 강도","안정감/편안함","피드백","동기부여","스트레칭 비중","코어 집중"]},
+  {id:"goal",title:"원하는 변화 (3개월 목표)",multi:true,options:["체형 라인 변화","통증 감소","체력 향상","유연성 증가","생활 자세 개선","체중 감량","근력 증가","밸런스 개선","스트레스 해소"]},
+  {id:"sleep",title:"수면 상태",multi:false,options:["잘 자는 편(7h+)","보통(5~7h)","가끔 뒤척임","자주 깸","불면","수면 부족(5h 미만)"]},
+  {id:"stress",title:"스트레스 수준",multi:false,options:["낮음","보통","높음","매우 높음"]},
+  {id:"diet",title:"식습관",multi:false,options:["규칙적 3끼","불규칙함","소식","과식 경향","다이어트 중","채식"]},
+  {id:"dietDetail",title:"식단 구성",multi:true,options:["탄수화물 위주","단백질 위주","균형 식단","인스턴트/가공식품 많음","야식 자주","카페인 과다","음주 잦음","보충제 복용 중"]},
+  {id:"dietGoal",title:"식단 관련 목표",multi:true,options:["체중 감량","근육량 증가","체지방 감소","식단 균형 맞추기","간헐적 단식","특별한 목표 없음"]},
+  {id:"dietIssue",title:"식단 관련 고민",multi:true,options:["폭식 경향","야식 습관","불규칙한 식사 시간","수분 섭취 부족","영양 불균형","소화 문제","식욕 부진","특이사항 없음"]},
+  {id:"memo",title:"강사 상담 메모",multi:false,options:["직접 입력"]}
+];
+const LS={get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+let _p=false;
+async function pushG(u,m,r,i){if(!u||_p)return;_p=true;try{
+  /* 설문 데이터 플래트닝 */
+  const surveys=m.filter(x=>x.survey).map(x=>{
+    const s={name:x.name,phone:x.phone||"",status:x.status||"",surveyDate:x.survey._date||""};
+    SURVEY_Q.forEach(q=>{const v=x.survey[q.id];s[q.id]=Array.isArray(v)?v.join(", "):(v||"")});return s});
+  /* 상담(비회원) 데이터 */
+  const consults=m.filter(x=>x.status==="consult").map(x=>({
+    name:x.name,phone:x.phone||"",memo:x.profile?.consultMemo||"",createdAt:x.createdAt||"",
+    hasSurvey:x.survey?"Y":"N"}));
+  /* 회원 전체 정보 플래트닝 */
+  const memberDetails=m.filter(x=>x.status!=="consult").map(x=>{
+    const p=x.profile||{};const inst=i?.find(t=>t.id===x.instructorId);
+    return{name:x.name,phone:x.phone||"",gender:p.gender||"",birthYear:p.birthYear||"",
+      createdAt:x.createdAt||"",memberType:p.memberType||"",instructor:inst?.name||"",
+      status:x.status||"",totalSessions:x.totalSessions||0,usedSessions:x.usedSessions||0,
+      remaining:(x.totalSessions||0)-(x.usedSessions||0),
+      weeklyDays:(x.weeklyDays||[]).join("·"),classTime:x.classTime||"",room:x.room||"",
+      firstClassDate:x.firstClassDate||"",expiryDate:x.expiryDate||"",
+      pendingRenewal:x.pendingRenewal?`${x.pendingRenewal.sessions}회 (${x.pendingRenewal.date})`:"",
+      referral:p.referral||"",notification:p.notification||"",emergencyPhone:p.emergencyPhone||"",
+      privacyAgreed:p.privacyAgreed?"Y":"N",termsAgreed:p.termsAgreed?"Y":"N",
+      color:x.color||"",hasSurvey:x.survey?"Y":"N"}});
+  /* 결제 내역 플래트닝 */
+  const payments=[];m.forEach(x=>{(x.payments||[]).forEach(p=>{
+    payments.push({name:x.name,date:p.date||"",amount:p.amount||0,method:p.method||"",memo:p.memo||""})})});
+  /* 출석 기록 플래트닝 */
+  const attendances=r.map(x=>{const inst=i?.find(t=>t.id===x.instructorId);
+    return{name:x.memberName||"",date:x.date||"",time:x.timestamp?new Date(x.timestamp).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}):"",
+      type:x.type==="attended"?"출석":x.type==="noshow"?"노쇼":x.type==="skipped"?"스킵":x.type||"",
+      instructor:inst?.name||"",isSubstitute:x.isSubstitute?"Y":"N"}});
+  await fetch(u,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({
+    members:m,records:r.map(x=>({...x,signature:null})),instructors:i,
+    surveys,consults,memberDetails,payments,attendances,
+    timestamp:new Date().toISOString()})})
+}catch{}finally{_p=false}}
+async function pullG(u){if(!u)return null;try{const r=await fetch(u+"?t="+Date.now());return r.ok?await r.json():null}catch{return null}}
+
+const inp={get padding(){return"12px 14px"},get borderRadius(){return 12},get border(){return`1.5px solid ${C.bdr}`},get fontSize(){return 15},get outline(){return"none"},get background(){return C.card},get color(){return C.txt},get width(){return"100%"},get boxSizing(){return"border-box"}};
+const ovl={position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(50,30,20,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:16};
+const ovlH={position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(50,30,20,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:150,padding:16};
+const modal={get background(){return C.card},borderRadius:22,padding:24,boxShadow:"0 24px 64px rgba(125,90,74,.18)",width:"100%",maxWidth:560};
+
+function Btn({children,primary,danger,small,full,style:s,...p}){return<button className="btn" style={{padding:small?"8px 16px":"14px 20px",borderRadius:small?10:14,fontSize:small?13:15,fontWeight:600,color:primary||danger?"white":C.txtM,background:danger?C.danger:primary?C.pri:C.card,border:primary||danger?"none":`1.5px solid ${C.bdr}`,width:full?"100%":"auto",...s}} {...p}>{children}</button>}
+function SyncDot({s}){if(s==="syncing")return<span className="dot-loading"><span/><span/><span/></span>;if(s==="idle")return null;return<span style={{fontSize:10,color:s==="success"?C.ok:C.danger,fontWeight:600,padding:"2px 6px",borderRadius:6,background:s==="success"?C.okBg:C.dangerBg}}>{s==="success"?"완료":"실패"}</span>}
+function Badge({children,color,bg}){return<span style={{fontSize:10,padding:"2px 7px",borderRadius:6,fontWeight:600,color:color||C.inst,background:bg||C.instBg,whiteSpace:"nowrap"}}>{children}</span>}
+function ColorPick({value,onChange}){return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{MCOL.map(c=>(<button key={c} className="btn" onClick={()=>onChange(c)} style={{width:24,height:24,borderRadius:"50%",background:c,border:value===c?"3px solid #3D2B22":"2px solid #E0CBBD"}}/>))}</div>)}
+function DayPick({days,onChange}){return(<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{WD.map(d=>(<button key={d} className="btn" onClick={()=>onChange(days.includes(d)?days.filter(x=>x!==d):[...days,d])} style={{width:34,height:34,borderRadius:10,fontSize:12,fontWeight:600,border:days.includes(d)?"none":`1.5px solid ${C.bdr}`,background:days.includes(d)?C.pri:C.card,color:days.includes(d)?"white":C.txtL}}>{d}</button>))}</div>)}
+function SubSelect({instructors,mid,members,onChange,value}){const mb=members.find(m=>m.id===mid);const asgn=mb?.instructorId;const ai=instructors.filter(x=>x.status==="active");if(ai.length<=1)return null;return(<div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 0",flexWrap:"wrap"}}><span style={{fontSize:12,color:C.txtM,fontWeight:600}}>수업 강사:</span>{ai.map(inst=>{const sub=inst.id!==asgn;const on=value===inst.id;return(<Btn key={inst.id} small onClick={()=>onChange(inst.id)} style={{borderColor:on?(sub?C.warn:C.inst):C.bdr,background:on?(sub?C.warnBg:C.instBg):C.card,color:on?(sub?C.warn:C.inst):C.txtL,padding:"5px 10px",fontSize:12}}>{inst.name}{sub&&on?" (대강)":""}</Btn>)})}</div>)}
+function RoomBadge({room}){if(!room)return null;return<span style={{fontSize:9,fontWeight:800,padding:"1px 5px",borderRadius:3,color:"white",background:room==="A"?C.roomA:C.roomB}}>{room}</span>}
+
+/* TimePick with conflict blocking */
+function TimePick({value,onChange,takenTimes,compact,singleInst}){
+  const sz=compact?{w:46,h:28,f:11,g:3,r:6}:{w:52,h:32,f:12,g:4,r:8};
+  const taken=takenTimes||[];
+  return(<div style={{display:"flex",gap:sz.g,flexWrap:"wrap"}}>{HOURS.map(h=>{const isTaken=taken.includes(h)&&h!==value;const sel=value===h;const blocked=isTaken&&singleInst;
+    return(<button key={h} className="btn" onClick={()=>{if(blocked){alert(`${h}시에 이미 다른 수업이 있습니다`);return}onChange(sel?"":h)}} style={{width:sz.w,height:sz.h,borderRadius:sz.r,fontSize:sz.f,fontWeight:sel?700:500,border:sel?"none":`1px solid ${blocked?"#eee":C.bdr}`,background:sel?C.pri:blocked?"#e8e3de":C.card,color:sel?"white":blocked?"#c5b8b0":C.txtM,textDecoration:blocked?"line-through":"none",cursor:blocked?"not-allowed":"pointer"}}>{h}</button>)})}</div>)}
+
+const IcoSkip=({sz=13})=><svg width={sz} height={sz} viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><path d="M17 3v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IcoDel=({sz=13})=><svg width={sz} height={sz} viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M5 6v14a2 2 0 002 2h10a2 2 0 002-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
+const IcoUndo=({sz=13})=><svg width={sz} height={sz} viewBox="0 0 24 24" fill="none"><path d="M3 10h10a5 5 0 010 10H9M3 10l4-4M3 10l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IcoCal=({sz=18})=><svg width={sz} height={sz} viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+
+/* Stamp */
+function StampBar({total,used,animate,records,memberId,onDeleteNS,pendingRenewal}){const sz=total>12?26:total>8?30:36;const gap=total>12?4:total>8?5:7;const rem=total-used;
+  const allMr=(records||[]).filter(r=>r.memberId===memberId&&(r.type==="attended"||r.type==="noshow")).sort((a,b)=>(a.timestamp||"").localeCompare(b.timestamp||""));
+  /* 현재 회원권의 기록만 사용: 가장 최근 used개 */
+  const mr=allMr.slice(Math.max(0,allMr.length-used));
+  return(<div style={{padding:"10px 0"}}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.txtM,marginBottom:6}}><span>회원권 {total}회</span><span style={{fontWeight:700,color:rem<=2?C.danger:C.priD}}>잔여 {rem}회</span></div>
+    <div style={{display:"flex",gap,flexWrap:"wrap",justifyContent:"center",background:C.card,borderRadius:16,padding:"14px 10px",border:`1px solid ${C.bdr}`}}>
+      {Array.from({length:total}).map((_,i)=>{const rec=mr[i];const filled=i<used;const isLast=animate&&i===used-1;const isNS=rec?.type==="noshow";const col=isNS?C.stampNS:C.stamp;
+        return(<div key={i} style={{position:"relative",width:sz,height:sz,cursor:isNS&&onDeleteNS?"pointer":"default"}} onClick={()=>{if(isNS&&onDeleteNS&&confirm("노쇼 삭제 + 횟수 복원?"))onDeleteNS(rec)}}>
+          <div style={{width:sz,height:sz,borderRadius:"50%",border:`2px ${filled?"solid":"dashed"} ${filled?col:C.bdr}`,background:filled?"transparent":C.priP,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:sz*.32,fontWeight:700,color:C.priL,opacity:filled?0:.45,userSelect:"none"}}>{i+1}</span></div>
+          {filled&&<div style={{position:"absolute",top:"-8%",left:"-8%",width:"116%",height:"116%",borderRadius:"50%",background:col,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",animation:isLast?(isNS?"stampNS .5s ease both":"stampHit .5s ease both"):"none",boxShadow:`0 2px 8px ${isNS?"rgba(100,100,100,.25)":"rgba(139,47,58,.3)"}`}}>
+            {isNS?<><svg width={sz*.35} height={sz*.35} viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg><span style={{fontSize:Math.max(sz*.16,6),color:"rgba(255,255,255,.7)",fontWeight:700,lineHeight:1,marginTop:1}}>NS</span></>:
+            <svg width={sz*.5} height={sz*.5} viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          </div>}
+        </div>)})}
+    </div>
+    {pendingRenewal&&<div style={{marginTop:8,padding:"8px 12px",borderRadius:10,background:"#EDF4F0",border:"1px solid #c5ddd3",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:12,fontWeight:700,color:C.inst}}>연장 예정 {pendingRenewal.sessions}회</span><span style={{fontSize:10,color:C.txtL}}>결제 {fmtShort(pendingRenewal.date)}</span></div>}
+  </div>)}
+
+/* Login + Loading */
+function LoginScreen({onLogin}){const[p,setP]=useState("");const[err,setErr]=useState(false);const chk=()=>{if(p===PIN){sessionStorage.setItem("ode-auth","1");onLogin()}else{setErr(true);setP("");setTimeout(()=>setErr(false),1500)}};
+  return(<div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}><div className="af" style={{textAlign:"center",width:"100%",maxWidth:360}}><div style={{fontSize:13,letterSpacing:6,color:C.priL,fontWeight:600,marginBottom:8}}>PILATES STUDIO</div><h1 style={{fontSize:26,fontWeight:900,color:C.priD,letterSpacing:3,margin:"0 0 40px"}}>ODE TO PILATES</h1><div className="as" style={{background:C.card,borderRadius:22,padding:"32px 24px",boxShadow:"0 8px 40px rgba(125,90,74,.1)"}}><p style={{color:C.txtM,fontSize:14,margin:"0 0 18px",fontWeight:500}}>비밀번호를 입력해주세요</p><input type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&chk()} placeholder="••••" style={{padding:16,borderRadius:14,border:err?`2px solid ${C.danger}`:`2px solid ${C.bdr}`,fontSize:26,textAlign:"center",width:"100%",outline:"none",fontFamily:"monospace",letterSpacing:10,color:C.txt,boxSizing:"border-box"}} autoFocus/>{err&&<p style={{color:C.danger,fontSize:13,fontWeight:600,margin:"10px 0 0"}}>비밀번호가 틀립니다</p>}<Btn primary full style={{marginTop:18,padding:"15px 0",fontSize:16}} onClick={chk}>로그인</Btn></div></div></div>)}
+function LoadingGate({msg}){return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg}}><div style={{textAlign:"center"}}><div style={{fontSize:13,letterSpacing:6,color:C.priL,marginBottom:8}}>PILATES STUDIO</div><p style={{fontSize:24,fontWeight:900,color:C.priD,letterSpacing:3,margin:"0 0 24px"}}>ODE TO PILATES</p><div className="spinner" style={{margin:"0 auto 16px"}}/><p style={{color:C.txtM,fontSize:14,fontWeight:500}}>{msg}</p></div></div>)}
+
+/* Signature */
+function SigPad({onSave,onCancel}){const ref=useRef(null);const[dr,setDr]=useState(false);const[dn,setDn]=useState(false);
+  const initCanvas=useCallback(()=>{const c=ref.current;if(!c)return;const x=c.getContext("2d"),r=c.getBoundingClientRect();c.width=r.width*2;c.height=r.height*2;x.scale(2,2);x.strokeStyle=C.priD;x.lineWidth=2.5;x.lineCap="round";x.lineJoin="round"},[]);
+  useEffect(()=>{initCanvas();const h=()=>{setTimeout(initCanvas,100)};window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[initCanvas]);
+  const gp=e=>{const r=ref.current.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}};const ms=e=>{e.preventDefault();const x=ref.current.getContext("2d"),pp=gp(e);x.beginPath();x.moveTo(pp.x,pp.y);setDr(true);setDn(true)};const mm=e=>{e.preventDefault();if(!dr)return;const x=ref.current.getContext("2d"),pp=gp(e);x.lineTo(pp.x,pp.y);x.stroke()};const me=()=>setDr(false);const cl=()=>{ref.current.getContext("2d").clearRect(0,0,ref.current.width,ref.current.height);setDn(false)};
+  return(<div className="sig-wrap" style={{display:"flex",flexDirection:"column",gap:10}}><div style={{border:`2px dashed ${C.priL}`,borderRadius:18,overflow:"hidden",background:C.card,position:"relative"}}><canvas ref={ref} className="sig-canvas" style={{width:"100%",height:200,touchAction:"none",cursor:"crosshair"}} onMouseDown={ms} onMouseMove={mm} onMouseUp={me} onMouseLeave={me} onTouchStart={ms} onTouchMove={mm} onTouchEnd={me}/>{!dn&&<div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",pointerEvents:"none",zIndex:2}}><div style={{color:C.priL,fontSize:16,fontWeight:600}}>서명해주세요</div><div style={{color:C.bdr,fontSize:12,marginTop:6}}>손가락으로 자유롭게 서명하시면 됩니다</div></div>}</div><div style={{display:"flex",gap:8}}><Btn style={{flex:1}} onClick={onCancel}>취소</Btn><Btn style={{flex:1}} onClick={cl}>다시</Btn><Btn primary style={{flex:2,opacity:dn?1:.4}} onClick={()=>dn&&onSave(ref.current.toDataURL("image/png"))}>서명 완료</Btn></div></div>)}
+
+/* History (with time display + signature thumbnail) */
+function Hist({records,limit,instructors,onSkip,onUndoSkip,onDel,onDelAny,showAct}){const sh=limit?records.slice(-limit).reverse():records.slice().reverse();if(!sh.length)return<div style={{textAlign:"center",padding:16,color:C.txtL,fontSize:13}}>기록 없음</div>;
+  return(<div style={{display:"flex",flexDirection:"column",gap:4}}>{sh.map((r,i)=>{const ns=r.type==="noshow";const sk=r.type==="skipped";const inst=instructors?.find(x=>x.id===r.instructorId);const tm=fmtT(r.timestamp);
+    return(<div key={r.timestamp||i} className="ar" style={{animationDelay:`${i*.03}s`,padding:"9px 12px",borderRadius:10,background:ns?C.noshowBg:sk?"#f5f1ed":C.card,border:`1px solid ${ns?"#f0c4bf":sk?C.warn+"40":C.bdr}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:6}}>
+      {r.signature&&<div style={{width:44,height:28,flexShrink:0,borderRadius:4,overflow:"hidden",border:`1px solid ${C.bdr}`,background:"#faf8f6"}}><img src={r.signature} style={{width:"100%",height:"100%",objectFit:"contain"}}/></div>}
+      <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}><span style={{fontSize:11,color:ns?C.noshow:sk?C.warn:C.priD,fontWeight:800}}>#{sh.length-i}</span><span style={{fontSize:12,color:ns?C.noshow:C.txt,fontWeight:600}}>{fmt(r.date)}</span>{tm&&<span style={{fontSize:10,color:C.txtL}}>{tm}</span>}</div><div style={{display:"flex",alignItems:"center",gap:5,marginTop:1}}>{ns&&<span style={{fontSize:8,fontWeight:800,color:C.noshow,border:`1.5px solid ${C.noshow}`,borderRadius:3,padding:"0 3px"}}>NO SHOW</span>}{sk&&<span style={{fontSize:8,fontWeight:700,color:C.warn,border:`1.5px solid ${C.warn}`,borderRadius:3,padding:"0 3px"}}>SKIP</span>}{r.memberName&&<span style={{fontSize:10,color:C.txtM,fontWeight:600}}>{r.memberName}</span>}{inst&&<span style={{fontSize:10,color:C.inst}}>{inst.name}</span>}</div></div>
+      {showAct&&<div style={{display:"flex",gap:3,flexShrink:0}}>
+        {ns&&<><button className="btn" onClick={()=>onSkip?.(r)} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.warn}`,background:C.card,color:C.warn,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoSkip/></button><button className="btn" onClick={()=>(onDelAny||onDel)?.(r)} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.danger}`,background:C.card,color:C.danger,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoDel/></button></>}
+        {sk&&<><button className="btn" onClick={()=>onUndoSkip?.(r)} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.txtL}`,background:C.card,color:C.txtM,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoUndo/></button>{onDelAny&&<button className="btn" onClick={()=>onDelAny(r)} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.danger}`,background:C.card,color:C.danger,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoDel/></button>}</>}
+        {!ns&&!sk&&onDelAny&&<button className="btn" onClick={()=>onDelAny(r)} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.danger}`,background:C.card,color:C.danger,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoDel/></button>}
+      </div>}
+    </div>)})}</div>)}
+
+function HistModal({mb,records,instructors,onClose,onSkip,onUndoSkip,onDel,onDeleteNS}){const mr=records.filter(r=>r.memberId===mb.id);
+  return(<div style={ovl} onClick={onClose}><div className="as" style={{...modal,maxHeight:"85vh",overflow:"auto"}} onClick={e=>e.stopPropagation()}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><h3 style={{color:C.txt,margin:0,fontSize:16,fontWeight:800}}>{mb.name} <span style={{fontWeight:400,color:C.txtL,fontSize:13}}>회원님</span></h3><button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:C.txtL}}>x</button></div>
+    <StampBar total={mb.totalSessions} used={mb.usedSessions} records={records} memberId={mb.id} onDeleteNS={onDeleteNS} pendingRenewal={mb.pendingRenewal}/>
+    <Hist records={mr} limit={30} instructors={instructors} showAct={true} onSkip={onSkip} onUndoSkip={onUndoSkip} onDel={onDel}/>
+  </div></div>)}
+
+function ResultScreen({mb,records,onDone}){return(<div className="af" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,padding:"20px 0"}}><div style={{animation:"checkPop .5s ease both",width:60,height:60,borderRadius:"50%",background:C.ok,display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg></div><h2 style={{fontWeight:800,fontSize:19,color:C.txt,margin:0}}>수업 확인 완료</h2><p style={{fontSize:14,color:C.txtM,margin:0}}>{mb.name} 회원님, 오늘도 수고하셨습니다</p><StampBar total={mb.totalSessions} used={mb.usedSessions} animate={true} records={records} memberId={mb.id} pendingRenewal={mb.pendingRenewal}/><Btn primary full style={{padding:"14px 0",fontSize:15}} onClick={onDone}>홈으로</Btn></div>)}
+
+/* ═══ SURVEY ═══ */
+function SurveyModal({mb,onSave,onClose,readOnly:initRO}){
+  const init=()=>{const s={};SURVEY_Q.forEach(q=>{s[q.id]=mb.survey?.[q.id]||(q.multi?[]:"")});s._etc=mb.survey?._etc||{};s._date=mb.survey?._date||"";return s};
+  const[ans,setAns]=useState(init);const[ro,setRo]=useState(initRO);const[etcOpen,setEtcOpen]=useState(null);const[etcVal,setEtcVal]=useState("");
+  const toggle=(qid,opt,multi)=>{if(ro)return;if(multi){const cur=ans[qid]||[];if(opt==="없음")setAns({...ans,[qid]:cur.includes("없음")?[]:["없음"]});else setAns({...ans,[qid]:cur.includes(opt)?cur.filter(x=>x!==opt):cur.filter(x=>x!=="없음").concat(opt)})}else setAns({...ans,[qid]:ans[qid]===opt?"":opt})};
+  const startEdit=(e)=>{if(e)e.stopPropagation();setRo(false)};
+  const addEtc=(qid)=>{if(!etcVal.trim())return;const v="기타: "+etcVal.trim();const q=SURVEY_Q.find(x=>x.id===qid);if(q.multi){const cur=ans[qid]||[];if(!cur.includes(v))setAns({...ans,[qid]:[...cur,v],_etc:{...ans._etc,[qid]:etcVal.trim()}})}else setAns({...ans,[qid]:v,_etc:{...ans._etc,[qid]:etcVal.trim()}});setEtcVal("");setEtcOpen(null)};
+  const hasSurvey=mb.survey&&Object.keys(mb.survey).filter(k=>k!=="_etc"&&k!=="_date").length>0;
+  const answered=SURVEY_Q.filter(q=>q.id!=="memo").filter(q=>{const v=ans[q.id];return v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력")}).length;
+  const total=SURVEY_Q.filter(q=>q.id!=="memo").length;
+  /* ── View mode (compact) ── */
+  if(ro){return(<div style={ovlH} onClick={onClose}><div className="as" style={{...modal,maxHeight:"90vh",overflow:"auto",padding:"16px 14px"}} onClick={e=>e.stopPropagation()}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <h3 style={{margin:0,fontSize:16,fontWeight:800,color:C.txt}}>{mb.name} <span style={{fontWeight:400,color:C.txtL,fontSize:12}}>설문</span></h3>
+      <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:C.txtL}}>✕</button>
+    </div>
+    {!hasSurvey?<div style={{textAlign:"center",padding:"30px 0"}}><p style={{color:C.txtL,fontSize:14,marginBottom:12}}>설문 정보가 없습니다</p><Btn primary onClick={e=>startEdit(e)}>설문 시작</Btn></div>:
+    <div>
+      {SURVEY_Q.map(q=>{const v=ans[q.id];const hasV=v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력");if(!hasV)return null;
+        const isWarnQ=["pain","condition","caution"].includes(q.id);
+        return(<div key={q.id} style={{display:"flex",gap:6,padding:"6px 0",borderBottom:`1px solid ${C.bdr}22`}}>
+          <span style={{fontSize:10,fontWeight:700,color:isWarnQ?C.warn:C.priD,minWidth:62,flexShrink:0,paddingTop:1}}>{q.title}</span>
+          <div style={{display:"flex",gap:3,flexWrap:"wrap",flex:1}}>
+            {q.id==="memo"?<span style={{fontSize:11,color:C.txt,lineHeight:1.4}}>{v}</span>:
+            (Array.isArray(v)?v:[v]).map((a,i)=>{
+              const isWarn=["자주 통증 있음","치료 중","일상생활 지장","임신","산후 6개월 이내","수술 이력","골절 이력"].some(w=>a.includes(w));
+              const isPain=q.id==="pain"&&a!=="없음";
+              return(<span key={i} style={{fontSize:10,fontWeight:600,padding:"2px 6px",borderRadius:5,
+                background:isWarn?C.dangerBg:isPain?C.warnBg:"#f5f0ec",
+                color:isWarn?C.danger:isPain?C.warn:C.txt}}>{a}</span>)})
+            }
+          </div>
+        </div>)})}
+      {ans._date&&<div style={{fontSize:9,color:C.txtL,textAlign:"right",marginTop:6}}>작성일: {ans._date}</div>}
+      <div style={{display:"flex",gap:6,marginTop:8}}><Btn full onClick={e=>startEdit(e)} style={{fontSize:12,padding:"8px 0"}}>수정</Btn><Btn full onClick={onClose} style={{fontSize:12,padding:"8px 0"}}>닫기</Btn></div>
+    </div>}
+  </div></div>)}
+  /* ── Edit mode (all questions at once) ── */
+  return(<div style={ovlH} onClick={onClose}><div className="as" style={{...modal,maxHeight:"92vh",overflow:"auto",padding:"16px 14px"}} onClick={e=>e.stopPropagation()}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:-16,background:C.card,zIndex:5,padding:"10px 0 8px",marginTop:-16,borderBottom:`1px solid ${C.bdr}`}}>
+      <h3 style={{margin:0,fontSize:15,fontWeight:800,color:C.txt}}>{mb.name} 설문</h3>
+      <span style={{fontSize:11,color:C.txtL}}>{answered}/{total}</span>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8}}>
+    {SURVEY_Q.map((q,qi)=>{const v=ans[q.id];const hasV=v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력");
+      return(<div key={q.id} style={{padding:"8px 10px",borderRadius:10,background:hasV?"#f7f2ee":C.card,border:`1px solid ${hasV?C.pri+"30":C.bdr}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4}}>
+          <span style={{fontSize:9,color:C.txtL,fontWeight:700}}>{qi+1}</span>
+          <span style={{fontSize:12,fontWeight:700,color:C.priD}}>{q.title}</span>
+          <span style={{fontSize:9,color:C.txtL}}>{q.id==="memo"?"자유 입력":q.multi?"복수":"1개"}</span>
+        </div>
+        {q.id==="memo"?<textarea value={typeof v==="string"&&v!=="직접 입력"?v:""} onChange={e=>setAns({...ans,memo:e.target.value})} placeholder="상담 내용을 자유롭게 입력하세요" style={{...inp,minHeight:60,resize:"vertical",padding:"6px 8px",fontSize:12}}/>:
+        <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+          {q.options.map(opt=>{const sel=q.multi?(v||[]).includes(opt):v===opt;
+            return(<button key={opt} className="btn" onClick={()=>toggle(q.id,opt,q.multi)} style={{padding:"4px 9px",borderRadius:7,fontSize:11,fontWeight:sel?700:400,border:sel?"none":`1px solid ${C.bdr}`,background:sel?C.pri:C.card,color:sel?"white":C.txtM}}>{opt}</button>)})}
+          {etcOpen===q.id?<div style={{display:"flex",gap:3,width:"100%",marginTop:2}}><input value={etcVal} onChange={e=>setEtcVal(e.target.value)} placeholder="직접 입력" style={{...inp,flex:1,padding:"4px 8px",fontSize:11}} autoFocus onKeyDown={e=>e.key==="Enter"&&addEtc(q.id)}/><Btn small primary onClick={()=>addEtc(q.id)} style={{padding:"4px 8px",fontSize:10}}>추가</Btn><Btn small onClick={()=>{setEtcOpen(null);setEtcVal("")}} style={{padding:"4px 6px",fontSize:10}}>취소</Btn></div>:
+          <button className="btn" onClick={()=>setEtcOpen(q.id)} style={{padding:"4px 8px",borderRadius:7,fontSize:10,border:`1px dashed ${C.bdr}`,background:"transparent",color:C.txtL}}>+ 기타</button>}
+        </div>}
+      </div>)})}
+    </div>
+    <div style={{display:"flex",gap:8,marginTop:10,position:"sticky",bottom:-16,background:C.card,padding:"10px 0",borderTop:`1px solid ${C.bdr}`}}>
+      <Btn style={{flex:1}} onClick={onClose}>취소</Btn>
+      <Btn primary style={{flex:2}} onClick={()=>{const missing=[];SURVEY_Q.forEach((q,i)=>{if(q.id!=="memo"){const v=ans[q.id];const has=v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력");if(!has)missing.push(`${i+1}. ${q.title}`)}});if(missing.length>0){const proceed=confirm(`아래 항목이 비어있습니다:\n\n${missing.join("\n")}\n\n그래도 저장하시겠습니까?`);if(!proceed)return}try{const final={...ans,_date:td()};onSave(final);alert("✅ 설문이 저장되었습니다!")}catch(e){alert("❌ 저장에 실패했습니다.")}}}>설문 저장</Btn>
+    </div>
+  </div></div>)}
+const IcoSurvey=({sz=14})=><svg width={sz} height={sz} viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.5"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.5"/><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+
+/* Modals */
+function PauseModal({mb,onOk,onNo}){const hw=HOLD_WEEKS(mb.totalSessions);const[r,setR]=useState("");return(<div style={ovl} onClick={onNo}><div className="as" style={{...modal,maxWidth:380}} onClick={e=>e.stopPropagation()}><h3 style={{color:C.txt,marginTop:0,fontSize:16}}>홀드 — {mb.name}</h3><div style={{padding:"8px 10px",borderRadius:8,background:C.warnBg,border:`1px solid ${C.warn}40`,marginBottom:10,fontSize:12,color:C.warn,fontWeight:600}}>기본 제공: {hw}주 ({hw*7}일) · {mb.totalSessions}회 기준</div><textarea value={r} onChange={e=>setR(e.target.value)} placeholder="사유" style={{...inp,minHeight:60,resize:"vertical"}}/><div style={{display:"flex",gap:8,marginTop:14}}><Btn style={{flex:1}} onClick={onNo}>취소</Btn><Btn primary style={{flex:1,background:C.warn}} onClick={()=>onOk(r)}>홀드</Btn></div></div></div>)}
+function TransferModal({members,instructors,from,onOk,onNo}){const[to,setTo]=useState("");const[sel,setSel]=useState([]);const my=members.filter(m=>m.instructorId===from.id&&m.status!=="paused");const tgt=instructors.filter(x=>x.id!==from.id&&x.status==="active");const tog=id=>setSel(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);return(<div style={ovl} onClick={onNo}><div className="as" style={{...modal,maxHeight:"85vh",overflow:"auto"}} onClick={e=>e.stopPropagation()}><h3 style={{color:C.inst,margin:"0 0 4px",fontSize:16}}>회원 양도 — {from.name}</h3><div style={{marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:12,fontWeight:700}}>양도 회원</span><button onClick={()=>setSel(my.map(m=>m.id))} style={{fontSize:11,color:C.inst,background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>전체</button></div><div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:150,overflow:"auto"}}>{my.map(m=>(<button key={m.id} className="card-act" onClick={()=>tog(m.id)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:8,border:sel.includes(m.id)?`2px solid ${C.inst}`:`1px solid ${C.bdr}`,background:sel.includes(m.id)?C.instBg:"white",textAlign:"left",width:"100%",boxSizing:"border-box"}}><span style={{fontSize:13,fontWeight:600}}>{m.name}</span></button>))}</div></div><div style={{marginBottom:12}}><span style={{fontSize:12,fontWeight:700,display:"block",marginBottom:6}}>받을 강사</span><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{tgt.map(inst=>(<Btn key={inst.id} small onClick={()=>setTo(inst.id)} style={{borderColor:to===inst.id?C.inst:C.bdr,background:to===inst.id?C.instBg:"white",color:to===inst.id?C.inst:C.txtL}}>{inst.name}</Btn>))}</div></div><div style={{display:"flex",gap:8}}><Btn style={{flex:1}} onClick={onNo}>취소</Btn><Btn primary style={{flex:1,background:sel.length&&to?C.inst:"#ccc"}} onClick={()=>sel.length&&to&&onOk(sel,to)}>양도</Btn></div></div></div>)}
+function RenewModal({mb,onOk,onNo}){const[nt,setNt]=useState(8);const[nd,setNd]=useState(mb.weeklyDays||[]);const[nf,setNf]=useState(td());return(<div style={ovl} onClick={onNo}><div className="as" style={{...modal,maxWidth:420}} onClick={e=>e.stopPropagation()}><h3 style={{color:C.txt,margin:"0 0 12px",fontSize:16}}>회원권 연장 — {mb.name}</h3><p style={{fontSize:12,color:C.txtL,margin:"0 0 8px"}}>현재 잔여 {mb.totalSessions-mb.usedSessions}회 — 연장 예약</p><div style={{display:"flex",flexDirection:"column",gap:12}}><div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:13,color:C.txtM,fontWeight:600}}>횟수:</span>{[8,16,24].map(n=>(<Btn key={n} small onClick={()=>setNt(n)} style={{background:nt===n?C.pri:"white",color:nt===n?"white":C.txtL,borderColor:nt===n?C.pri:C.bdr}}>{n}회</Btn>))}</div><div><span style={{fontSize:13,color:C.txtM,fontWeight:600,display:"block",marginBottom:6}}>수업 요일</span><DayPick days={nd} onChange={setNd}/></div><div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:13,color:C.txtM,fontWeight:600,flexShrink:0}}>시작일</span><input type="date" value={nf} onChange={e=>setNf(e.target.value)} style={{...inp,flex:1}}/></div></div><div style={{display:"flex",gap:8,marginTop:16}}><Btn style={{flex:1}} onClick={onNo}>취소</Btn><Btn primary style={{flex:1}} onClick={()=>onOk({sessions:nt,weeklyDays:nd,startDate:nf})}>연장 예약</Btn></div></div></div>)}
+function MoveModal({fromDate,memberId,members,onMove,onClose}){const[toD,setToD]=useState("");const m=members.find(x=>x.id===memberId);return(<div style={{...ovl,zIndex:300}} onClick={onClose}><div className="as" style={{...modal,maxWidth:380}} onClick={e=>e.stopPropagation()}><h3 style={{margin:"0 0 8px",fontSize:15,fontWeight:700}}>수업 이동 — {m?.name}</h3><p style={{fontSize:12,color:C.txtM,margin:"0 0 12px"}}>{fmt(fromDate)} → 다른 날짜</p><input type="date" value={toD} onChange={e=>setToD(e.target.value)} style={{...inp,marginBottom:12}} min={td()}/><div style={{display:"flex",gap:8}}><Btn style={{flex:1}} onClick={onClose}>취소</Btn><Btn primary style={{flex:1,opacity:toD?1:.4}} onClick={()=>toD&&onMove(memberId,fromDate,toD)}>이동</Btn></div></div></div>)}
+
+/* Clock Daily View — Large pizza chart */
+function ClockView({schedule,date}){
+  const sz=340;const cx=sz/2;const cy=sz/2;const outerR=sz/2-20;const innerR=sz/2-80;
+  const startH=8,endH=22,total=endH-startH;
+  const toRad=deg=>(deg*Math.PI)/180;
+  const hAngle=h=>((h-startH)/total)*360-90;
+  const arcPath=(r,a1,a2)=>{const ra1=toRad(a1),ra2=toRad(a2);const x1=cx+Math.cos(ra1)*r,y1=cy+Math.sin(ra1)*r;const x2=cx+Math.cos(ra2)*r,y2=cy+Math.sin(ra2)*r;return{x1,y1,x2,y2}};
+  const hasSchedule=schedule.filter(m=>m.displayTime).length>0;
+  return(<div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"10px 0"}}>
+    <div style={{fontSize:16,fontWeight:800,marginBottom:12,color:C.txt}}>{fmt(date)}</div>
+    <div style={{position:"relative",width:sz+40,height:sz+40}}>
+      <svg width={sz+40} height={sz+40} viewBox={`-20 -20 ${sz+40} ${sz+40}`}>
+        {/* Outer ring */}
+        <circle cx={cx} cy={cy} r={outerR} fill="#faf8f6" stroke={C.bdr} strokeWidth="2"/>
+        <circle cx={cx} cy={cy} r={innerR} fill="white" stroke={C.bdr} strokeWidth="1"/>
+        {/* Hour grid lines and labels 8~21 */}
+        {Array.from({length:total}).map((_,i)=>{const h=startH+i;const a=hAngle(h);const ra=toRad(a);
+          const ox=cx+Math.cos(ra)*outerR,oy=cy+Math.sin(ra)*outerR;
+          const ix=cx+Math.cos(ra)*innerR,iy=cy+Math.sin(ra)*innerR;
+          const lx=cx+Math.cos(ra)*(outerR+14),ly=cy+Math.sin(ra)*(outerR+14);
+          const hasSess=schedule.some(m=>m.displayTime&&parseInt(m.displayTime)=== h);
+          return(<g key={h}>
+            <line x1={ix} y1={iy} x2={ox} y2={oy} stroke={C.bdr} strokeWidth="1" strokeDasharray={hasSess?"":"3 3"}/>
+            <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={hasSess?"800":"500"} fill={hasSess?C.priD:C.txtL}>{h}</text>
+          </g>)})}
+        {/* Pizza slices for sessions */}
+        {schedule.map((m,i)=>{if(!m.displayTime)return null;
+          const hr=parseInt(m.displayTime.split(":")[0]);
+          const a1=hAngle(hr),a2=hAngle(hr+1);
+          const o1=arcPath(outerR-1,a1,a2),i1=arcPath(innerR+1,a1,a2);
+          const mc=m.color||C.pri;
+          const midA=toRad((a1+a2)/2);
+          const labelR=(outerR+innerR)/2;
+          const lx=cx+Math.cos(midA)*labelR,ly=cy+Math.sin(midA)*labelR;
+          const fill=m.done?mc:m.noshow?C.noshow:mc;
+          const opacity=m.done?1:m.noshow?.8:.25;
+          return(<g key={m.id}>
+            <path d={`M${i1.x1},${i1.y1} L${o1.x1},${o1.y1} A${outerR-1},${outerR-1} 0 0,1 ${o1.x2},${o1.y2} L${i1.x2},${i1.y2} A${innerR+1},${innerR+1} 0 0,0 ${i1.x1},${i1.y1}`} fill={fill} opacity={opacity} stroke={mc} strokeWidth="2"/>
+            <text x={lx} y={ly-6} textAnchor="middle" dominantBaseline="middle" fontSize="11" fontWeight="800" fill={m.done||m.noshow?"white":mc}>{m.name}</text>
+            <text x={lx} y={ly+7} textAnchor="middle" dominantBaseline="middle" fontSize="9" fontWeight="600" fill={m.done||m.noshow?"rgba(255,255,255,.8)":C.txtM}>{m.displayTime}</text>
+            {m.displayRoom&&<text x={lx} y={ly+18} textAnchor="middle" fontSize="8" fontWeight="800" fill={m.done?"rgba(255,255,255,.9)":m.displayRoom==="A"?C.roomA:C.roomB}>{m.displayRoom}실</text>}
+          </g>)})}
+        {/* Center */}
+        <circle cx={cx} cy={cy} r={innerR-1} fill="white"/>
+        <text x={cx} y={cy-8} textAnchor="middle" fontSize="13" fontWeight="800" fill={C.priD}>{schedule.length}명</text>
+        <text x={cx} y={cy+8} textAnchor="middle" fontSize="10" fill={C.txtL}>수업</text>
+      </svg>
+    </div>
+    {/* Legend below */}
+    {schedule.length>0&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8,width:"100%",maxWidth:360}}>
+      {schedule.map(m=>{const mc=m.color||C.pri;return(<div key={m.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,background:C.card,border:`1px solid ${C.bdr}`,borderLeft:`4px solid ${mc}`}}>
+        <span style={{fontSize:13,fontWeight:800,color:mc,minWidth:45}}>{m.displayTime||"--:--"}</span>
+        <span style={{fontSize:13,fontWeight:700,flex:1}}>{m.name}</span>
+        {m.displayRoom&&<RoomBadge room={m.displayRoom}/>}
+        <span style={{fontSize:11,color:m.done?C.ok:m.noshow?C.noshow:C.txtL,fontWeight:600}}>{m.done?"완료":m.noshow?"노쇼":"예정"}</span>
+      </div>)})}
+    </div>}
+    {schedule.filter(m=>!m.displayTime).length>0&&<div style={{marginTop:8,fontSize:12,color:C.warn,fontWeight:600,background:C.warnBg,padding:"6px 12px",borderRadius:8}}>시간 미설정: {schedule.filter(m=>!m.displayTime).map(m=>m.name).join(", ")}</div>}
+  </div>)
+}
+
+/* Timeline Daily View — vertical bus-route style */
+function TimelineView({schedule,date}){
+  const hasTime=schedule.filter(m=>m.displayTime);const noTime=schedule.filter(m=>!m.displayTime);
+  const sorted=[...hasTime].sort((a,b)=>a.displayTime.localeCompare(b.displayTime));
+  return(<div style={{padding:"4px 0"}}>
+    <div style={{fontSize:16,fontWeight:800,marginBottom:12,color:C.txt,textAlign:"center"}}>{fmt(date)}</div>
+    {sorted.length===0&&noTime.length===0&&<p style={{color:C.txtL,textAlign:"center",padding:20}}>수업 없음</p>}
+    <div style={{position:"relative",marginLeft:8}}>
+      {sorted.map((m,i)=>{const mc=m.color||C.pri;
+        return(<div key={m.id} style={{display:"flex",alignItems:"stretch",marginBottom:12,position:"relative"}}>
+          {/* Time column */}
+          <div style={{width:50,flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
+            <div style={{fontSize:13,fontWeight:800,color:C.priD,marginBottom:4}}>{m.displayTime}</div>
+            <div style={{width:12,height:12,borderRadius:"50%",background:mc,border:"2px solid white",boxShadow:`0 0 0 2px ${mc}`,flexShrink:0,zIndex:1}}/>
+            {i<sorted.length-1&&<div style={{flex:1,width:2,background:C.bdr,marginTop:2}}/>}
+          </div>
+          {/* Card */}
+          <div style={{flex:1,padding:"10px 14px",borderRadius:14,background:m.done?"#f0faf3":m.noshow?C.noshowBg:C.card,border:`1.5px solid ${m.done?"#c3e6cb":m.noshow?"#f0c4bf":C.bdr}`,borderLeft:`5px solid ${mc}`,marginLeft:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                <span style={{fontSize:15,fontWeight:800,color:C.txt}}>{m.name}</span>
+                {m.displayRoom&&<RoomBadge room={m.displayRoom}/>}
+                {m.instName&&<Badge>{m.instName}</Badge>}
+              </div>
+              <span style={{fontSize:11,fontWeight:700,color:m.done?C.ok:m.noshow?C.noshow:C.txtL}}>{m.done?"완료":m.noshow?"노쇼":"예정"}</span>
+            </div>
+          </div>
+        </div>)})}
+    </div>
+    {noTime.length>0&&<div style={{marginTop:8,fontSize:12,color:C.warn,fontWeight:600,background:C.warnBg,padding:"6px 12px",borderRadius:8}}>시간 미설정: {noTime.map(m=>m.name).join(", ")}</div>}
+  </div>)
+}
+function Calendar({members,records,instructors,onUpM}){
+  const[view,setView]=useState("month");const[base,setBase]=useState(new Date());
+  const[panelDate,setPanelDate]=useState(null);const[addMod,setAddMod]=useState(null);const[moveMod,setMoveMod]=useState(null);
+  const[fInst,setFInst]=useState("all");const[dayMode,setDayMode]=useState("timeline");
+  const aI=instructors.filter(x=>x.status==="active");
+  const singleInst=aI.length<=1;
+  const targetM=fInst==="all"?members.filter(m=>m.status==="active"):members.filter(m=>m.instructorId===fInst&&m.status==="active");
+
+  const weekStart=useMemo(()=>{const d=new Date(base);const day=d.getDay()||7;d.setDate(d.getDate()-day+1);d.setHours(0,0,0,0);return d},[base]);
+  const weekDates=useMemo(()=>Array.from({length:7}).map((_,i)=>{const d=new Date(weekStart);d.setDate(d.getDate()+i);return d}),[weekStart]);
+  const monthStart=useMemo(()=>new Date(base.getFullYear(),base.getMonth(),1),[base]);
+  const monthDates=useMemo(()=>{const d=[];const y=monthStart.getFullYear(),mo=monthStart.getMonth();const first=new Date(y,mo,1);const sd=(first.getDay()||7)-1;for(let i=-sd;i<42-sd;i++){d.push(new Date(y,mo,1+i))}return d},[monthStart]);
+  const fmtD=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const today=td();
+
+  const getSched=ds=>{const wd=DK[new Date(ds).getDay()];const result=[];targetM.forEach(m=>{const ov=m.scheduleOverrides||[];const isDef=m.weeklyDays?.includes(wd);const removed=ov.some(o=>o.date===ds&&o.type==="remove");const addOv=ov.find(o=>o.date===ds&&o.type==="add");const timeOv=ov.find(o=>o.date===ds&&o.time!==undefined);
+    if((isDef&&!removed)||addOv){const done=records.some(r=>r.memberId===m.id&&r.date===ds&&r.type==="attended");const ns=records.some(r=>r.memberId===m.id&&r.date===ds&&r.type==="noshow");const dt=addOv?.time||timeOv?.time||m.classTime||"";const rm=addOv?.room||timeOv?.room||m.room||"";const inst=instructors.find(x=>x.id===m.instructorId);
+      result.push({...m,done,noshow:ns,isExtra:!!addOv&&!isDef,displayTime:dt,displayRoom:rm,instName:inst?.name||""})}});
+    return result.sort((a,b)=>(a.displayTime||"99:99").localeCompare(b.displayTime||"99:99"))};
+
+  const removeFrom=(mid,ds)=>{const m=members.find(x=>x.id===mid);if(!m)return;const wd=DK[new Date(ds).getDay()];let nv=[...(m.scheduleOverrides||[])];if(m.weeklyDays?.includes(wd)){if(!nv.some(o=>o.date===ds&&o.type==="remove"))nv.push({date:ds,type:"remove"})}else nv=nv.filter(o=>!(o.date===ds&&o.type==="add"));onUpM(members.map(x=>x.id===mid?{...x,scheduleOverrides:nv}:x))};
+  const addTo=(mid,ds)=>{const m=members.find(x=>x.id===mid);if(!m)return;let nv=[...(m.scheduleOverrides||[])];const wd=DK[new Date(ds).getDay()];if(m.weeklyDays?.includes(wd))nv=nv.filter(o=>!(o.date===ds&&o.type==="remove"));else{if(!nv.some(o=>o.date===ds&&o.type==="add"))nv.push({date:ds,type:"add",time:m.classTime||"",room:m.room||""})}onUpM(members.map(x=>x.id===mid?{...x,scheduleOverrides:nv}:x));setAddMod(null)};
+  const moveClass=(mid,from,to)=>{if(!to)return;const m=members.find(x=>x.id===mid);if(!m)return;let nv=[...(m.scheduleOverrides||[])];const wdF=DK[new Date(from).getDay()];if(m.weeklyDays?.includes(wdF)){if(!nv.some(o=>o.date===from&&o.type==="remove"))nv.push({date:from,type:"remove"})}else nv=nv.filter(o=>!(o.date===from&&o.type==="add"));const wdT=DK[new Date(to).getDay()];if(m.weeklyDays?.includes(wdT))nv=nv.filter(o=>!(o.date===to&&o.type==="remove"));else{if(!nv.some(o=>o.date===to&&o.type==="add"))nv.push({date:to,type:"add",time:m.classTime||"",room:m.room||""})}onUpM(members.map(x=>x.id===mid?{...x,scheduleOverrides:nv}:x));setMoveMod(null)};
+  const saveOv=(mid,ds,time,room)=>{const m=members.find(x=>x.id===mid);if(!m)return;let nv=[...(m.scheduleOverrides||[])];const idx=nv.findIndex(o=>o.date===ds);if(idx>=0){nv[idx]={...nv[idx],time,room}}else{const wd=DK[new Date(ds).getDay()];if(m.weeklyDays?.includes(wd))nv.push({date:ds,type:"timeChange",time,room});else{const ai=nv.findIndex(o=>o.date===ds&&o.type==="add");if(ai>=0)nv[ai]={...nv[ai],time,room}}}onUpM(members.map(x=>x.id===mid?{...x,scheduleOverrides:nv}:x))};
+  const nav=dir=>{const d=new Date(base);if(view==="month")d.setMonth(d.getMonth()+dir);else if(view==="week")d.setDate(d.getDate()+dir*7);else d.setDate(d.getDate()+dir);setBase(d);setPanelDate(null)};
+
+  const panelRef=useRef(null);const prevPanel=useRef(null);
+  // Track if panel just opened (for animation)
+  const panelJustOpened=panelDate&&panelDate!==prevPanel.current;
+  useEffect(()=>{prevPanel.current=panelDate},[panelDate]);
+
+  // Computed panel data
+  const panelSc=panelDate?getSched(panelDate).slice().sort((a,b)=>a.name.localeCompare(b.name,"ko")):[];
+  const panelIsPast=panelDate?panelDate<today:false;
+  const panelNotSc=panelDate?targetM.filter(m=>!panelSc.some(s=>s.id===m.id)):[];
+  const panelAllTaken=panelSc.filter(m=>m.displayTime).map(m=>({id:m.id,time:m.displayTime}));
+  const getPanelTaken=(mid)=>singleInst?panelAllTaken.filter(x=>x.id!==mid).map(x=>x.time):[];
+
+  return(<div className="af">
+    <div style={{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap",overflowX:"auto"}}>
+      <Btn small onClick={()=>setFInst("all")} style={{background:fInst==="all"?C.priD:"white",color:fInst==="all"?"white":C.txtL,borderColor:fInst==="all"?C.priD:C.bdr,padding:"5px 12px",fontSize:11}}>전체</Btn>
+      {aI.map(inst=>(<Btn key={inst.id} small onClick={()=>setFInst(inst.id)} style={{background:fInst===inst.id?C.inst:"white",color:fInst===inst.id?"white":C.txtL,borderColor:fInst===inst.id?C.inst:C.bdr,padding:"5px 12px",fontSize:11}}>{inst.name}</Btn>))}
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <div style={{display:"flex",gap:3}}>{[["month","월간"],["week","주간"],["day","일간"]].map(([v,l])=>(<Btn key={v} small onClick={()=>{setView(v);setPanelDate(null)}} style={{background:view===v?C.pri:"white",color:view===v?"white":C.txtM,borderColor:view===v?C.pri:C.bdr,padding:"5px 10px",fontSize:11}}>{l}</Btn>))}</div>
+      <div style={{display:"flex",alignItems:"center",gap:6}}><Btn small onClick={()=>nav(-1)} style={{padding:"4px 10px",fontSize:13}}>←</Btn><span style={{fontSize:13,fontWeight:700}}>{view==="month"?`${base.getFullYear()}년 ${base.getMonth()+1}월`:view==="week"?`${fmtS(fmtD(weekDates[0]))} ~ ${fmtS(fmtD(weekDates[6]))}`:`${fmt(fmtD(base))}`}</span><Btn small onClick={()=>nav(1)} style={{padding:"4px 10px",fontSize:13}}>→</Btn></div>
+    </div>
+
+    {view==="month"&&<div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:4}}>{WD.map(d=>(<div key={d} style={{textAlign:"center",fontSize:12,fontWeight:700,color:C.txtL,padding:4}}>{d}</div>))}</div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>{monthDates.map((dt,i)=>{const ds=fmtD(dt);const isTM=dt.getMonth()===monthStart.getMonth();const isToday=ds===today;const sc=getSched(ds);
+      return(<div key={i} className="card-act" onClick={()=>{if(isTM)setPanelDate(ds)}} style={{background:isToday?"#FFF8F0":isTM?C.card:"#faf8f6",borderRadius:10,padding:"6px 4px",minHeight:60,border:isToday?`2px solid ${C.pri}`:`1px solid ${isTM?C.bdr:"#eee"}`,opacity:isTM?1:.25}}>
+        <div style={{fontSize:11,fontWeight:isToday?800:500,color:isToday?C.priD:C.txtM,marginBottom:3,textAlign:"center"}}>{dt.getDate()}</div>
+        {sc.slice(0,4).map(m=>{const mc=m.color||C.pri;return(<div key={m.id} style={{fontSize:8,fontWeight:600,padding:"2px 3px",borderRadius:3,marginBottom:2,color:m.done?"white":mc,background:m.done?mc:"transparent",border:`1px solid ${m.done?mc:m.noshow?C.noshow:mc}`,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:2}}>
+          {m.displayTime&&<span style={{opacity:.6}}>{m.displayTime.slice(0,5)}</span>}<span>{m.name}</span>{m.displayRoom&&<RoomBadge room={m.displayRoom}/>}</div>)})}
+        {sc.length>4&&<div style={{fontSize:8,color:C.txtL,textAlign:"center"}}>+{sc.length-4}</div>}
+      </div>)})}</div></div>}
+
+    {view==="week"&&<div style={{display:"flex",flexDirection:"column",gap:5}}>{weekDates.map(dt=>{const ds=fmtD(dt);const isToday=ds===today;const sc=getSched(ds);
+      return(<div key={ds} className="card-act" onClick={()=>setPanelDate(ds)} style={{background:isToday?"#FFF8F0":C.card,borderRadius:12,border:isToday?`2px solid ${C.pri}`:`1px solid ${C.bdr}`,padding:"12px 14px",opacity:ds<today&&!isToday?.45:1}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:sc.length?6:0}}><span style={{fontSize:14,fontWeight:isToday?800:600,color:isToday?C.priD:C.txt}}>{DK[dt.getDay()]} {dt.getDate()}일</span>{sc.length>0&&<span style={{fontSize:12,color:C.txtL}}>{sc.length}명</span>}</div>
+        {sc.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{sc.map(m=>{const mc=m.color||C.pri;return(<span key={m.id} style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:8,color:m.done?"white":m.noshow?"white":mc,background:m.done?mc:m.noshow?C.noshow:"white",border:`1.5px solid ${m.done?mc:m.noshow?C.noshow:mc}`,display:"inline-flex",alignItems:"center",gap:3}}>
+          {m.displayTime&&<span style={{opacity:.6,fontSize:10}}>{m.displayTime}</span>}{m.name}{m.displayRoom&&<RoomBadge room={m.displayRoom}/>}</span>)})}</div>}
+      </div>)})}</div>}
+
+    {view==="day"&&<div>
+      <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:8}}>{[["timeline","타임라인"],["clock","시계"]].map(([k,l])=>(<Btn key={k} small onClick={()=>setDayMode(k)} style={{padding:"4px 14px",fontSize:11,background:dayMode===k?C.priD:"white",color:dayMode===k?"white":C.txtM,borderColor:dayMode===k?C.priD:C.bdr}}>{l}</Btn>))}</div>
+      {dayMode==="clock"?<ClockView schedule={getSched(fmtD(base))} date={fmtD(base)}/>:<TimelineView schedule={getSched(fmtD(base))} date={fmtD(base)}/>}
+    </div>}
+
+    {/* Inline right slide panel — no re-mount on data change */}
+    {panelDate&&<>
+      <div onClick={()=>setPanelDate(null)} style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(50,30,20,.3)",zIndex:200}}/>
+      <div ref={panelRef} style={{position:"fixed",top:0,right:0,bottom:0,width:"min(400px,88vw)",background:C.card,zIndex:201,animation:panelJustOpened?"slideInRight .25s ease":"none",boxShadow:"-8px 0 40px rgba(125,90,74,.15)",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"16px 18px",borderBottom:`1px solid ${C.bdr}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+          <div><div style={{fontSize:16,fontWeight:800}}>{fmt(panelDate)}</div><div style={{fontSize:12,color:C.txtL}}>{panelSc.length}명</div></div>
+          <button onClick={()=>setPanelDate(null)} style={{width:32,height:32,borderRadius:8,border:`1px solid ${C.bdr}`,background:C.card,fontSize:16,cursor:"pointer",color:C.txtL,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+        <div style={{flex:1,overflow:"auto",padding:"14px 18px"}}>
+          {panelSc.length===0?<p style={{color:C.txtL,fontSize:14,textAlign:"center",padding:20}}>수업 없음</p>:
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>{panelSc.map(m=>{const mc=m.color||C.pri;const taken=getPanelTaken(m.id);
+            return(<div key={m.id} style={{padding:"14px",borderRadius:14,background:m.done?"#f0faf3":m.noshow?C.noshowBg:"#faf8f6",border:`1px solid ${m.done?"#c3e6cb":m.noshow?"#f0c4bf":C.bdr}`,borderLeft:`5px solid ${mc}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                  <span style={{fontSize:15,fontWeight:800}}>{m.name}</span>
+                  {fInst==="all"&&m.instName&&<Badge>{m.instName}</Badge>}
+                  {m.isExtra&&<span style={{fontSize:8,color:C.warn,fontWeight:700,border:`1px solid ${C.warn}`,borderRadius:3,padding:"0 4px"}}>추가</span>}
+                  <span style={{fontSize:11,color:m.done?C.ok:m.noshow?C.noshow:C.txtL,fontWeight:700}}>{m.done?"완료":m.noshow?"노쇼":panelIsPast?"미완":"예정"}</span>
+                </div>
+                <div style={{display:"flex",gap:3}}>
+                  {!m.done&&!m.noshow&&!panelIsPast&&<Btn small style={{padding:"5px 8px",fontSize:10,color:C.priD}} onClick={()=>setMoveMod({memberId:m.id,fromDate:panelDate})}>이동</Btn>}
+                  <button className="btn" onClick={()=>{if(confirm(`${m.name} 수업을 삭제합니다`))removeFrom(m.id,panelDate)}} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.danger}`,background:C.card,color:C.danger,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoDel/></button>
+                </div>
+              </div>
+              <div style={{marginBottom:6}}><div style={{fontSize:11,color:C.txtM,fontWeight:600,marginBottom:4}}>수업 시간</div><TimePick compact value={m.displayTime} onChange={t=>saveOv(m.id,panelDate,t,m.displayRoom)} takenTimes={taken} singleInst={singleInst}/></div>
+              <div><div style={{fontSize:11,color:C.txtM,fontWeight:600,marginBottom:4}}>강의실</div><div style={{display:"flex",gap:4}}>{ROOMS.map(r=>(<button key={r} className="btn" onClick={()=>saveOv(m.id,panelDate,m.displayTime,r)} style={{padding:"5px 14px",borderRadius:8,fontSize:12,fontWeight:m.displayRoom===r?700:500,border:m.displayRoom===r?"none":`1px solid ${C.bdr}`,background:m.displayRoom===r?(r==="A"?C.roomA:r==="B"?C.roomB:C.pri):"white",color:m.displayRoom===r?"white":C.txtM}}>{r||"미지정"}</button>))}</div></div>
+            </div>)})}</div>}
+          {!panelIsPast&&panelNotSc.length>0&&<Btn full style={{fontSize:12,color:C.inst,borderColor:C.inst,marginTop:12,padding:"10px 0"}} onClick={()=>setAddMod({ds:panelDate,candidates:panelNotSc})}>+ 수업 추가</Btn>}
+        </div>
+      </div>
+    </>}
+    {addMod&&<div style={{...ovl,zIndex:300}} onClick={()=>setAddMod(null)}><div className="as" style={{...modal,maxWidth:400}} onClick={e=>e.stopPropagation()}><h3 style={{margin:"0 0 10px",fontSize:15,fontWeight:700}}>수업 추가 — {fmt(addMod.ds)}</h3><div style={{display:"flex",flexDirection:"column",gap:5}}>{addMod.candidates.map(m=>(<Btn key={m.id} full onClick={()=>addTo(m.id,addMod.ds)} style={{textAlign:"left",padding:"10px 14px",borderLeft:`4px solid ${m.color||C.pri}`}}><span style={{fontWeight:700}}>{m.name}</span></Btn>))}</div><Btn full style={{marginTop:10}} onClick={()=>setAddMod(null)}>닫기</Btn></div></div>}
+    {moveMod&&<MoveModal fromDate={moveMod.fromDate} memberId={moveMod.memberId} members={members} onMove={moveClass} onClose={()=>setMoveMod(null)}/>}
+  </div>)
+}
+
+/* ═══ Admin ═══ */
+function Admin({members,onUpM,records,onUpR,instructors,onUpI,sync,onSync,skipNS,undoSkip,delNS,delRecord}){
+  const[showAdd,setShowAdd]=useState(false);
+  const[nn,setNn]=useState("");const[np,setNp]=useState("");const nnRef=useRef(null);const npRef=useRef(null);
+  const[vr,setVr]=useState(null);const[tab,setTab]=useState("members");
+  const[pm,setPm]=useState(null);const[tfI,setTfI]=useState(null);const[renM,setRenM]=useState(null);
+  const[newIN,setNewIN]=useState("");const newINRef=useRef(null);
+  // Detail view states
+  const[detailId,setDetailId]=useState(null);const[dTab,setDTab]=useState("class");
+  const[eid,setEid]=useState(null);const[ev,setEv]=useState({});
+  // Profile edit
+  const[pf,setPf]=useState({});const[showPrivacy,setShowPrivacy]=useState(false);const[showTerms,setShowTerms]=useState(false);
+  // Payment
+  const[payAmt,setPayAmt]=useState("");const[payMeth,setPayMeth]=useState("카드");const[payMemo,setPayMemo]=useState("");const[receiptImg,setReceiptImg]=useState(null);const payAmtRef=useRef(null);const payMemoRef=useRef(null);
+  const receiptRef=useRef(null);const nameRef=useRef(null);const phoneRef=useRef(null);const emergRef=useRef(null);
+  // Survey inline
+  const[surveyStep,setSurveyStep]=useState(-1);const[surveyAns,setSurveyAns]=useState({});const[etcOpen,setEtcOpen]=useState(null);const[etcVal,setEtcVal]=useState("");
+
+  const aI=instructors.filter(x=>x.status==="active");
+  const defI=useMemo(()=>{const wj=instructors.find(x=>x.status==="active"&&x.role==="원장");return wj?.id||aI[0]?.id||""},[instructors,aI]);
+
+  const dm=detailId?members.find(x=>x.id===detailId):null;
+
+  const addM=()=>{const name=(nnRef.current?.value||"").trim();const phone=(npRef.current?.value||"").trim();if(!name)return;const id=Date.now().toString();const nm={id,name,phone,totalSessions:8,usedSessions:0,weeklyDays:[],firstClassDate:null,expiryDate:null,status:"active",pauseReason:null,pauseStartDate:null,pausedDays:0,instructorId:defI||null,color:MCOL[Math.floor(Math.random()*MCOL.length)],classTime:null,room:"",scheduleOverrides:[],renewals:[],createdAt:td(),profile:{},payments:[]};onUpM([...members,nm]);if(nnRef.current)nnRef.current.value="";if(npRef.current)npRef.current.value="";setShowAdd(false);openDetail(nm)};
+  const startE=m=>{setEid(m.id);setEv({name:m.name,phone:m.phone||"",totalSessions:m.totalSessions,weeklyDays:[...(m.weeklyDays||[])],firstClassDate:m.firstClassDate||"",expiryDate:m.expiryDate||"",instructorId:m.instructorId||"",color:m.color||C.pri,classTime:m.classTime||"",room:m.room||""})};
+  const saveE=id=>{const m=members.find(x=>x.id===id);const ne=ev.expiryManual?ev.expiryDate:(ev.firstClassDate?cExp(ev.firstClassDate,parseInt(ev.totalSessions),ev.weeklyDays,m.pausedDays||0):(ev.expiryDate||null));onUpM(members.map(x=>x.id===id?{...x,name:ev.name||x.name,phone:(ev.phone!=null?ev.phone:x.phone),totalSessions:parseInt(ev.totalSessions)||x.totalSessions,weeklyDays:ev.weeklyDays,firstClassDate:ev.firstClassDate||x.firstClassDate,expiryDate:ne,instructorId:ev.instructorId||null,color:ev.color,classTime:ev.classTime||null,room:ev.room||""}:x));setEid(null)};
+  const delM=id=>{if(!confirm("정말 삭제합니까?"))return;onUpM(members.filter(m=>m.id!==id));if(detailId===id)setDetailId(null)};
+  const pauseM=(id,reason)=>{onUpM(members.map(m=>m.id===id?{...m,status:"paused",pauseReason:reason,pauseStartDate:td()}:m));setPm(null)};
+  const resumeM=id=>{const m=members.find(x=>x.id===id);if(!m||m.status!=="paused")return;const pd=m.pauseStartDate?Math.max(0,Math.ceil((new Date(td())-new Date(m.pauseStartDate))/86400000)):0;const tp=(m.pausedDays||0)+pd;const ne=m.firstClassDate?cExp(m.firstClassDate,m.totalSessions,m.weeklyDays,tp):m.expiryDate?(()=>{const d=new Date(m.expiryDate);d.setDate(d.getDate()+pd);return d.toISOString().slice(0,10)})():null;onUpM(members.map(x=>x.id===id?{...x,status:"active",pauseReason:null,pauseStartDate:null,pausedDays:tp,expiryDate:ne}:x))};
+  const hRenew=(mb,data)=>{const pr={date:td(),sessions:data.sessions,weeklyDays:[...data.weeklyDays],startDate:data.startDate};onUpM(members.map(m=>m.id===mb.id?{...m,pendingRenewal:pr,renewals:[...(m.renewals||[]),pr]}:m));setRenM(null);alert("연장이 예약되었습니다. 현재 회원권 종료 후 자동 적용됩니다.")};
+  const addI=()=>{const name=(newINRef.current?.value||"").trim();if(!name)return;onUpI([...instructors,{id:Date.now().toString(),name,role:aI.length===0?"원장":"강사",status:"active",createdAt:td()}]);if(newINRef.current)newINRef.current.value=""};
+  const delI=id=>{const mc=members.filter(m=>m.instructorId===id);if(mc.length>0){setTfI(instructors.find(x=>x.id===id));return}if(!confirm("삭제?"))return;onUpI(instructors.filter(x=>x.id!==id))};
+  const hTf=(mids,toId)=>{onUpM(members.map(m=>mids.includes(m.id)?{...m,instructorId:toId}:m));const fromId=tfI?.id;if(fromId)onUpI(instructors.filter(x=>x.id!==fromId));setTfI(null)};
+  const copyKakao=(m)=>{const rem=m.totalSessions-m.usedSessions;const inst=instructors.find(x=>x.id===m.instructorId);const txt=`[ODE TO PILATES]\n${m.name} 회원님 수강 정보 안내\n\n잔여 횟수: ${rem}회 / ${m.totalSessions}회\n유효기간: ${m.expiryDate?fmtShort(m.expiryDate):"미정"}\n담당 강사: ${inst?(inst.role==="원장"?inst.role+" ":"")+inst.name:"미배정"}\n\n감사합니다.`;navigator.clipboard.writeText(txt).then(()=>alert("복사 완료!")).catch(()=>{const ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);alert("복사 완료!")})};
+  // Profile save
+  const savePf=(mid,data)=>{onUpM(members.map(m=>m.id===mid?{...m,profile:{...(m.profile||{}),...data}}:m))};
+  // Payment
+  const addPay=(mid)=>{const amt=payAmtRef.current?.value||"";const memo=payMemoRef.current?.value||"";if(!amt||isNaN(parseInt(amt)))return;const pay={id:Date.now().toString(),date:td(),amount:parseInt(amt),method:payMeth,memo,receipt:receiptImg||null};onUpM(members.map(m=>m.id===mid?{...m,payments:[...(m.payments||[]),pay]}:m));if(payAmtRef.current)payAmtRef.current.value="";if(payMemoRef.current)payMemoRef.current.value="";setReceiptImg(null)};
+  const delPay=(mid,pid)=>{if(!confirm("삭제?"))return;onUpM(members.map(m=>m.id===mid?{...m,payments:(m.payments||[]).filter(p=>p.id!==pid)}:m))};
+  const captureReceipt=(e)=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=re=>{const img=new Image();img.onload=()=>{const c=document.createElement("canvas");const mx=400;const sc=Math.min(mx/img.width,mx/img.height,1);c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);setReceiptImg(c.toDataURL("image/jpeg",.5))};img.src=re.target.result};reader.readAsDataURL(f)};
+  // Survey
+  const initSurvey=(m)=>{const s={};SURVEY_Q.forEach(q=>{s[q.id]=m.survey?.[q.id]||(q.multi?[]:"")});s._etc=m.survey?._etc||{};return s};
+  const saveSurvey=(mid,data)=>{onUpM(members.map(m=>m.id===mid?{...m,survey:{...data,_date:td()}}:m));setSurveyStep(-1)};
+  const toggleSA=(qid,opt,multi)=>{if(multi){const cur=surveyAns[qid]||[];if(opt==="없음")setSurveyAns({...surveyAns,[qid]:cur.includes("없음")?[]:["없음"]});else setSurveyAns({...surveyAns,[qid]:cur.includes(opt)?cur.filter(x=>x!==opt):cur.filter(x=>x!=="없음").concat(opt)})}else setSurveyAns({...surveyAns,[qid]:surveyAns[qid]===opt?"":opt})};
+  const addEtc=(qid)=>{if(!etcVal.trim())return;const v="기타: "+etcVal.trim();const q=SURVEY_Q.find(x=>x.id===qid);if(q.multi){const cur=surveyAns[qid]||[];if(!cur.includes(v))setSurveyAns({...surveyAns,[qid]:[...cur,v],_etc:{...surveyAns._etc,[qid]:etcVal.trim()}})}else setSurveyAns({...surveyAns,[qid]:v,_etc:{...surveyAns._etc,[qid]:etcVal.trim()}});setEtcVal("");setEtcOpen(null)};
+
+  // Open detail
+  const openDetail=(m)=>{setDetailId(m.id);setDTab("profile");setEid(null);setPf(m.profile||{});setEv({name:m.name,phone:m.phone||"",totalSessions:m.totalSessions,weeklyDays:[...(m.weeklyDays||[])],firstClassDate:m.firstClassDate||"",expiryDate:m.expiryDate||"",instructorId:m.instructorId||"",color:m.color||C.pri,classTime:m.classTime||"",room:m.room||""});setSurveyAns(initSurvey(m));setSurveyStep(-1)};
+
+  // Chip helper
+  const Chip=({on,onClick,children,c,s})=>(<button className="btn" onClick={onClick} style={{padding:"8px 14px",borderRadius:10,fontSize:14,fontWeight:on?700:500,border:on?"none":`1.5px solid ${C.bdr}`,background:on?(c||C.pri):"white",color:on?"white":C.txtM,...(s||{})}}>{children}</button>);
+  const F=({l,children})=>(<div style={{display:"flex",alignItems:"center",gap:8,minHeight:40}}><span style={{fontSize:14,color:C.txtM,fontWeight:700,width:74,flexShrink:0}}>{l}</span><div style={{flex:1,display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>{children}</div></div>);
+
+  return(<div className="af">
+
+      {/* HEADER */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {dm&&<button className="btn" onClick={()=>{setDetailId(null);setEid(null)}} style={{padding:"6px 10px",fontSize:16,borderRadius:8,border:`1px solid ${C.bdr}`,background:C.card}}>←</button>}
+          <h2 style={{fontWeight:800,fontSize:22,margin:0}}>{dm?dm.name:"관리자"}</h2>
+          {dm&&<span style={{fontSize:13,color:C.txtL}}>{dm.phone||""}</span>}
+          {dm&&<><button className="btn" onClick={()=>{if(confirm("비활성 처리합니다")){onUpM(members.map(x=>x.id===dm.id?{...x,status:"inactive"}:x));setDetailId(null)}}} style={{padding:"4px 8px",fontSize:11,borderRadius:6,border:`1px solid ${C.bdr}`,background:C.card,color:C.txtL,marginLeft:4}}>비활성</button><button className="btn" onClick={()=>delM(dm.id)} style={{padding:"4px 8px",fontSize:11,borderRadius:6,border:`1px solid #f0c4bf`,background:C.card,color:C.danger}}>삭제</button></>}
+        </div>
+        <SyncDot s={sync}/>
+      </div>
+
+      {/* ═══ MEMBER DETAIL VIEW ═══ */}
+      {dm?<>
+        {/* Detail tabs */}
+        <div style={{display:"flex",gap:4,marginBottom:14,flexWrap:"wrap"}}>
+          {[["profile","회원정보"],["survey","설문"],["class","수업관리"],["payment","결제"]].map(([k,l])=>{
+            const hasDot=k==="survey"&&dm.survey;const hasPay=k==="payment"&&(dm.payments||[]).length>0;
+            return(<button key={k} className="btn" onClick={()=>{setDTab(k);if(k==="survey"){setSurveyAns(initSurvey(dm));setSurveyStep(-1)}if(k==="profile")setPf(dm.profile||{})}} style={{padding:"10px 18px",borderRadius:12,fontSize:15,fontWeight:dTab===k?700:500,border:dTab===k?"none":`1.5px solid ${C.bdr}`,background:dTab===k?C.pri:C.card,color:dTab===k?"white":C.txtM,position:"relative"}}>{l}{(hasDot||hasPay)&&<span style={{position:"absolute",top:-1,right:-1,width:7,height:7,borderRadius:"50%",background:C.ok}}/>}</button>)})}
+        </div>
+
+        {/* ── CLASS TAB ── */}
+        {dTab==="class"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {/* Summary */}
+          <div style={{display:"flex",gap:8}}>
+            <div style={{flex:1,background:C.priP,borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:12,color:C.txtL,fontWeight:600}}>잔여</div><div style={{fontSize:28,fontWeight:900,color:(dm.totalSessions-dm.usedSessions)<=2?C.danger:C.priD}}>{dm.totalSessions-dm.usedSessions}<span style={{fontSize:13}}>회</span></div></div>
+            <div style={{flex:1,background:C.priP,borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:12,color:C.txtL,fontWeight:600}}>총</div><div style={{fontSize:28,fontWeight:900,color:C.priD}}>{dm.totalSessions}<span style={{fontSize:13}}>회</span></div></div>
+            <div style={{flex:1.5,background:C.priP,borderRadius:14,padding:"12px 10px",textAlign:"center"}}><div style={{fontSize:12,color:C.txtL,fontWeight:600}}>유효기간</div><div style={{fontSize:16,fontWeight:700,color:isExp(dm.expiryDate)?C.danger:C.txt}}>{dm.expiryDate?fmtShort(dm.expiryDate):"미정"}</div></div>
+          </div>
+          {/* Always editable fields */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14,display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"0 0 6px"}}>
+              <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:0}}>수업 설정</p>
+              <div style={{display:"flex",gap:4}}>
+                <button className="btn" onClick={()=>setRenM(dm)} style={{padding:"3px 8px",fontSize:10,borderRadius:6,background:C.priD,color:"white",border:"none",fontWeight:600}}>연장</button>
+                {dm.status==="paused"?<button className="btn" onClick={()=>resumeM(dm.id)} style={{padding:"3px 8px",fontSize:10,borderRadius:6,background:C.ok,color:"white",border:"none",fontWeight:600}}>재개</button>:<button className="btn" onClick={()=>setPm(dm)} style={{padding:"3px 8px",fontSize:10,borderRadius:6,color:C.warn,border:`1px solid ${C.warn}`,background:C.card,fontWeight:600}}>홀드</button>}
+                <button className="btn" onClick={()=>copyKakao(dm)} style={{padding:"3px 8px",fontSize:10,borderRadius:6,color:"#3B1E1E",background:"#FEE500",border:"none",fontWeight:600}}>카톡</button>
+              </div>
+            </div>
+            <F l="횟수">{[8,16,24].map(n=>(<Chip key={n} on={((ev.totalSessions!=null?ev.totalSessions:dm.totalSessions))===n} onClick={()=>setEv({...ev,totalSessions:n})}>{n}회</Chip>))}</F>
+            <F l="요일">{WD.map(d=>{const wd=ev.weeklyDays||dm.weeklyDays||[];return(<Chip key={d} on={wd.includes(d)} onClick={()=>{const nw=wd.includes(d)?wd.filter(x=>x!==d):[...wd,d];setEv({...ev,weeklyDays:nw})}}>{d}</Chip>)})}</F>
+            <F l="첫수업"><input type="date" value={ev.firstClassDate||""} onChange={e=>setEv({...ev,firstClassDate:e.target.value,expiryManual:false})} style={{...inp,width:160,padding:"8px 10px",fontSize:14}}/></F>
+            {(()=>{const fc=ev.firstClassDate;const ts=parseInt(ev.totalSessions)||dm.totalSessions;const wd=(ev.weeklyDays||dm.weeklyDays||[]).length;const autoExp=fc?cExp(fc,ts,ev.weeklyDays||dm.weeklyDays||[],dm.pausedDays||0):null;const curExp=ev.expiryManual?ev.expiryDate:(autoExp||ev.expiryDate||dm.expiryDate);const wks=vW(ts,wd||1);
+              return(<F l="만료일"><div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+                {ev.expiryManual?<><input type="date" value={ev.expiryDate||""} onChange={e=>setEv({...ev,expiryDate:e.target.value})} style={{...inp,width:160,padding:"8px 10px",fontSize:14}}/><button className="btn" onClick={()=>setEv({...ev,expiryManual:false,expiryDate:autoExp||""})} style={{fontSize:12,color:C.inst,background:"none",border:"none",textDecoration:"underline",flexShrink:0}}>자동</button></>:
+                <><span style={{fontSize:16,fontWeight:700,color:curExp?(isExp(curExp)?C.danger:C.txt):C.txtL}}>{curExp?fmtShort(curExp):"미정"}</span>{fc&&<span style={{fontSize:12,color:C.txtL,marginLeft:2}}>({wks}주)</span>}<button className="btn" onClick={()=>setEv({...ev,expiryManual:true,expiryDate:curExp||""})} style={{fontSize:12,color:C.warn,background:"none",border:"none",textDecoration:"underline",flexShrink:0,marginLeft:4}}>수정</button></>}
+              </div></F>)})()}
+            <F l="시간"><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>{HOURS.map(h=>{const ct=(ev.classTime!=null?ev.classTime:dm.classTime)||"";return(<button key={h} className="btn" onClick={()=>setEv({...ev,classTime:ct===h?"":h})} style={{padding:"8px 0",borderRadius:8,fontSize:13,fontWeight:ct===h?700:400,border:ct===h?"none":`1px solid ${C.bdr}`,background:ct===h?C.pri:C.card,color:ct===h?"white":C.txtM,textAlign:"center"}}>{h}</button>)})}</div></F>
+            <F l="강의실">{ROOMS.map(r=>(<Chip key={r} on={((ev.room!=null?ev.room:dm.room)||"")===r} onClick={()=>setEv({...ev,room:r})} c={r==="A"?C.roomA:r==="B"?C.roomB:C.pri}>{r||"미지정"}</Chip>))}</F>
+            <F l="강사">{aI.map(inst=>(<Chip key={inst.id} on={((ev.instructorId!=null?ev.instructorId:dm.instructorId))===inst.id} onClick={()=>setEv({...ev,instructorId:inst.id})} c={C.inst}>{inst.name}</Chip>))}</F>
+            <Btn primary full onClick={()=>{saveE(dm.id);setEid(null);alert("✅ 수업 정보가 저장되었습니다!")}} style={{marginTop:6,padding:"14px 0",fontSize:15}}>수업 정보 저장</Btn>
+          </div>
+          {/* Recent records */}
+          <div><p style={{fontSize:14,color:C.txtM,fontWeight:700,margin:"0 0 6px"}}>최근 기록</p><Hist records={records.filter(r=>r.memberId===dm.id)} limit={10} instructors={instructors} showAct={true} onDelAny={delRecord}/></div>
+        </div>}
+
+        {/* ── PROFILE TAB ── */}
+        {dTab==="profile"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {/* Section 0: 이름/연락처 */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>기본 정보</p>
+            <div style={{display:"flex",gap:4,marginBottom:4}}><div style={{flex:2}}><F l="이름"><input ref={nameRef} key={dm.id+"n"} defaultValue={dm.name} style={{...inp,padding:"7px 10px",fontSize:13}} placeholder="이름"/></F></div><div style={{flex:1}}><F l="연락처"><input ref={phoneRef} key={dm.id+"p"} defaultValue={dm.phone||""} style={{...inp,padding:"7px 10px",fontSize:13}} placeholder="연락처"/></F></div></div>
+          </div>
+          {/* Section 1: 필수 */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>필수 정보</p>
+            <F l="성별"><Chip on={pf.gender==="여성"} onClick={()=>setPf({...pf,gender:"여성"})}>여성</Chip><Chip on={pf.gender==="남성"} onClick={()=>setPf({...pf,gender:"남성"})}>남성</Chip></F>
+            <F l="생년월일"><select value={pf.birthYear||""} onChange={e=>setPf({...pf,birthYear:e.target.value})} style={{...inp,width:100,padding:"5px 8px",fontSize:12}}><option value="">선택</option>{Array.from({length:80},(_,i)=>2010-i).map(y=>(<option key={y} value={y}>{y}년</option>))}</select></F>
+            <F l="가입일"><span style={{fontSize:14}}>{dm.createdAt||td()}</span></F>
+          </div>
+          {/* Section 2: 이용 관리 */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>이용 관리</p>
+            <F l="유형"><Chip on={pf.memberType==="개인"} onClick={()=>setPf({...pf,memberType:"개인"})}>개인</Chip><Chip on={pf.memberType==="듀엣"} onClick={()=>setPf({...pf,memberType:"듀엣"})}>듀엣</Chip></F>
+            <F l="담당강사"><span style={{fontSize:12,fontWeight:600}}>{instructors.find(x=>x.id===dm.instructorId)?.name||"미배정"}</span></F>
+          </div>
+          {/* Section 3: 선택 */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>선택 정보</p>
+            <F l="비상연락"><input ref={emergRef} key={dm.id+"ep"} defaultValue={pf.emergencyPhone||""} placeholder="연락처" style={{...inp,flex:1,padding:"5px 8px",fontSize:12}}/></F>
+            <F l="유입경로">{["지인 추천","인스타그램","검색","간판/오프라인","기타"].map(o=>(<Chip key={o} on={pf.referral===o} onClick={()=>setPf({...pf,referral:o})} s={{fontSize:10,padding:"4px 8px"}}>{o}</Chip>))}</F>
+            <F l="알림동의"><Chip on={pf.notification==="문자/알림톡"} onClick={()=>setPf({...pf,notification:"문자/알림톡"})} s={{fontSize:10}}>문자/알림톡</Chip><Chip on={pf.notification==="수신 안 함"} onClick={()=>setPf({...pf,notification:"수신 안 함"})} s={{fontSize:10}}>수신 안 함</Chip></F>
+          </div>
+          {/* Section 4: 약관 */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>약관 및 동의</p>
+            <div style={{marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}><Chip on={pf.privacyAgreed} onClick={()=>setPf({...pf,privacyAgreed:!pf.privacyAgreed})} c={C.ok}>개인정보 수집·이용 동의</Chip>{!pf.privacyAgreed&&<span style={{fontSize:10,color:C.danger}}>필수</span>}<button className="btn" onClick={()=>setShowPrivacy(!showPrivacy)} style={{fontSize:10,color:C.inst,background:"none",border:"none",textDecoration:"underline"}}>{showPrivacy?"접기":"더보기"}</button></div>
+              {showPrivacy&&<div style={{fontSize:10,color:C.txtM,lineHeight:1.6,margin:"6px 0",padding:8,background:C.card,borderRadius:8,border:`1px solid ${C.bdr}`}}>
+                <b>개인정보 수집·이용 동의서</b><br/>
+                ODE TO PILATES(이하 '스튜디오')는 회원 관리 및 수업 운영을 위해 아래와 같이 개인정보를 수집·이용합니다.<br/><br/>
+                <b>1. 수집 항목</b><br/>
+                필수: 이름, 휴대폰 번호, 성별, 생년월일<br/>
+                선택: 비상 연락처, 건강 정보(통증 부위, 질환 이력), 운동 경험<br/><br/>
+                <b>2. 수집·이용 목적</b><br/>
+                회원 등록 및 본인 확인, 수업 스케줄 관리, 맞춤 운동 프로그램 설계, 건강 상태 파악 및 안전한 수업 진행, 회원권 관리 및 결제 내역 관리, 문자/알림톡 수업 안내<br/><br/>
+                <b>3. 보유 및 이용 기간</b><br/>
+                회원 탈퇴 시 또는 수집 목적 달성 후 즉시 파기합니다. 단, 결제 관련 기록은 관련 법령에 따라 5년간 보관합니다.<br/><br/>
+                <b>4. 동의 거부 권리</b><br/>
+                동의를 거부할 수 있으나, 필수 항목 미동의 시 회원 등록이 제한될 수 있습니다.
+              </div>}
+            </div>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}><Chip on={pf.termsAgreed} onClick={()=>setPf({...pf,termsAgreed:!pf.termsAgreed})} c={C.ok}>이용약관 동의</Chip>{!pf.termsAgreed&&<span style={{fontSize:10,color:C.danger}}>필수</span>}<button className="btn" onClick={()=>setShowTerms(!showTerms)} style={{fontSize:10,color:C.inst,background:"none",border:"none",textDecoration:"underline"}}>{showTerms?"접기":"더보기"}</button></div>
+              {showTerms&&<div style={{fontSize:10,color:C.txtM,lineHeight:1.6,margin:"6px 0",padding:8,background:C.card,borderRadius:8,border:`1px solid ${C.bdr}`}}>
+                <b>이용약관</b><br/><br/>
+                <b>제1조 (목적)</b><br/>
+                본 약관은 ODE TO PILATES 스튜디오(이하 '스튜디오')의 필라테스 수업 및 시설 이용에 관한 기본 사항을 규정합니다. 본 약관에 동의함으로써 회원은 스튜디오의 운영 방침을 이해하고 준수할 것에 동의합니다.<br/><br/>
+                <b>제2조 (회원권)</b><br/>
+                ① 회원권은 구매일로부터 정해진 유효기간 내에 사용해야 합니다.<br/>
+                ② 유효기간 경과 후 미사용 횟수는 자동 소멸되며, 소멸된 횟수에 대한 환불 및 연장은 불가합니다.<br/>
+                ③ 회원권은 본인만 사용 가능하며, 타인에게 양도하거나 공유할 수 없습니다.<br/>
+                ④ 회원권 유형(개인/듀엣)에 따라 이용 조건이 상이하며, 변경 시 차액이 발생할 수 있습니다.<br/><br/>
+                <b>제3조 (예약 및 취소)</b><br/>
+                ① 수업 예약 취소는 수업 시작 24시간 전까지 가능합니다.<br/>
+                ② 24시간 이내 취소 또는 무단 불참(노쇼) 시 1회가 차감됩니다.<br/>
+                ③ 지각 시 수업 참여가 제한될 수 있으며, 10분 이상 지각 시 노쇼로 처리될 수 있습니다.<br/>
+                ④ 예약 변경은 수업 시작 24시간 전까지 가능하며, 당일 변경은 불가합니다.<br/><br/>
+                <b>제4조 (홀드/일시중지)</b><br/>
+                ① 질병, 부상, 출산 등 불가피한 사유가 있을 경우 홀드를 신청할 수 있습니다.<br/>
+                ② 홀드 기간만큼 유효기간이 자동 연장됩니다.<br/>
+                ③ 홀드는 회원권 유효기간 내에서만 가능하며, 최소 7일 이상부터 신청 가능합니다.<br/>
+                ④ 홀드 횟수는 회원권당 최대 2회까지 가능합니다.<br/><br/>
+                <b>제5조 (환불)</b><br/>
+                ① 잔여 횟수에 대해 환불이 가능하며, 이용한 횟수는 정가 기준으로 차감 후 잔액을 환불합니다.<br/>
+                ② 환불 신청 시 결제일로부터 7일 이내이고 미이용인 경우 전액 환불됩니다.<br/>
+                ③ 할인 적용된 회원권의 환불 시 이용 횟수는 할인 전 정가로 계산됩니다.<br/>
+                ④ 환불 처리는 신청일로부터 영업일 기준 7일 이내에 완료됩니다.<br/><br/>
+                <b>제6조 (안전 및 건강)</b><br/>
+                ① 회원은 건강 상태를 정확히 고지해야 하며, 허위 고지로 인한 부상에 대해 스튜디오는 책임을 지지 않습니다.<br/>
+                ② 수업 중 발생하는 부상에 대해 스튜디오는 강사의 고의 또는 중대한 과실이 없는 한 책임을 지지 않습니다.<br/>
+                ③ <b>스튜디오 시설 내에서 발생한 부상 및 사고는 회원 본인의 부주의 또는 개인 과실에 의한 것으로 간주되며, 스튜디오는 이에 대한 민사상 배상 책임을 부담하지 않습니다.</b><br/>
+                ④ 기존 질환이나 부상이 있는 회원은 반드시 사전에 강사에게 고지해야 하며, 미고지로 인한 악화에 대해 스튜디오는 책임을 지지 않습니다.<br/>
+                ⑤ 임산부, 수술 후 회복기 등 특수 건강 상태의 회원은 의사 소견서를 제출해야 합니다.<br/><br/>
+                <b>제7조 (시설 이용)</b><br/>
+                ① 스튜디오 내 기구 및 시설물은 강사의 안내에 따라 사용해야 합니다.<br/>
+                ② 회원의 고의 또는 과실로 인한 기구 파손 시 수리비를 청구할 수 있습니다.<br/>
+                ③ 개인 소지품 분실에 대해 스튜디오는 책임을 지지 않으며, 귀중품은 본인이 관리해야 합니다.<br/><br/>
+                <b>제8조 (수업 변경 및 중단)</b><br/>
+                ① 스튜디오는 불가피한 사유(천재지변, 강사 사고 등)로 수업을 변경하거나 취소할 수 있습니다.<br/>
+                ② 스튜디오 사유로 취소된 수업은 보강 또는 횟수 복원으로 처리됩니다.<br/>
+                ③ 담당 강사 변경이 필요한 경우 사전 안내 후 진행합니다.<br/><br/>
+                <b>제9조 (개인정보 및 촬영)</b><br/>
+                ① 수업 중 촬영(사진/영상)은 스튜디오 및 다른 회원의 동의 없이 금지됩니다.<br/>
+                ② 스튜디오가 홍보 목적으로 촬영하는 경우 별도 동의를 구합니다.<br/><br/>
+                <b>제10조 (약관 변경)</b><br/>
+                본 약관은 스튜디오의 운영 방침에 따라 변경될 수 있으며, 변경 시 사전 고지합니다.
+              </div>}
+            </div>
+          </div>
+          {/* Section 5: 색상 */}
+          <div style={{background:C.priPP,borderRadius:14,padding:14}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>회원 색상</p>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{MCOL.map(c=>(<button key={c} className="btn" onClick={()=>setEv({...ev,color:c})} style={{width:22,height:22,borderRadius:"50%",background:c,border:((ev.color!=null?ev.color:dm.color))===c?"3px solid #3D2B22":"2px solid #E0CBBD"}}/>))}</div>
+          </div>
+          <Btn primary full onClick={()=>{const nm=nameRef.current?.value?.trim()||dm.name;const ph=phoneRef.current?.value?.trim()||"";const ep=emergRef.current?.value?.trim()||"";const cl=ev.color||dm.color;onUpM(members.map(m=>m.id===dm.id?{...m,name:nm,phone:ph,color:cl,profile:{...(m.profile||{}),...pf,emergencyPhone:ep}}:m));alert("저장 완료")}} style={{padding:"12px 0",fontSize:14}}>회원정보 저장</Btn>
+        </div>}
+
+        {/* ── PAYMENT TAB ── */}
+        {dTab==="payment"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {/* Add payment */}
+          <div style={{background:C.priPP,borderRadius:12,padding:12}}>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 10px"}}>결제 등록</p>
+            <div style={{display:"flex",gap:4,marginBottom:6}}>
+              <input ref={payAmtRef} type="number" placeholder="금액" style={{...inp,flex:1,padding:"8px 10px",fontSize:14,fontWeight:700}}/>
+              <span style={{fontSize:13,fontWeight:600,color:C.txtM,alignSelf:"center"}}>원</span>
+            </div>
+            <F l="결제방식">{["카드","현금","계좌이체"].map(m=>(<Chip key={m} on={payMeth===m} onClick={()=>setPayMeth(m)}>{m}</Chip>))}</F>
+            <div style={{marginTop:6}}><input ref={payMemoRef} placeholder="메모 (선택)" style={{...inp,padding:"6px 10px",fontSize:12}}/></div>
+            <div style={{display:"flex",gap:6,marginTop:8,alignItems:"center"}}>
+              <input ref={receiptRef} type="file" accept="image/*" capture="environment" onChange={captureReceipt} style={{display:"none"}}/>
+              <Btn small onClick={()=>receiptRef.current?.click()} style={{padding:"6px 12px",fontSize:11,color:C.inst,borderColor:C.inst}}>📷 영수증 촬영</Btn>
+              {receiptImg&&<div style={{position:"relative"}}><img src={receiptImg} style={{width:40,height:40,borderRadius:6,objectFit:"cover",border:`1px solid ${C.bdr}`}}/><button onClick={()=>setReceiptImg(null)} style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:C.danger,color:"white",border:"none",fontSize:8,cursor:"pointer"}}>✕</button></div>}
+            </div>
+            <Btn primary full onClick={()=>addPay(dm.id)} style={{marginTop:8,padding:"10px 0",fontSize:13}}>결제 등록</Btn>
+          </div>
+          {/* Payment history */}
+          <div>
+            <p style={{fontSize:15,fontWeight:800,color:C.priD,margin:"0 0 8px"}}>결제 내역{(dm.payments||[]).length>0&&` (${(dm.payments||[]).reduce((s,p)=>s+p.amount,0).toLocaleString()}원)`}</p>
+            {!(dm.payments||[]).length?<p style={{fontSize:12,color:C.txtL,textAlign:"center",padding:16}}>결제 내역이 없습니다</p>:
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>{[...(dm.payments||[])].reverse().map(p=>(<div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 10px",borderRadius:10,background:C.card,border:`1px solid ${C.bdr}`}}>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:6}}><span style={{fontSize:15,fontWeight:800,color:C.priD}}>{p.amount.toLocaleString()}원</span><Badge>{p.method}</Badge></div>
+                <div style={{fontSize:10,color:C.txtL}}>{fmtShort(p.date)}{p.memo&&` · ${p.memo}`}</div>
+              </div>
+              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                {p.receipt&&<img src={p.receipt} onClick={()=>window.open(p.receipt)} style={{width:28,height:28,borderRadius:4,objectFit:"cover",cursor:"pointer",border:`1px solid ${C.bdr}`}}/>}
+                <button onClick={()=>delPay(dm.id,p.id)} style={{background:"none",border:"none",color:C.txtL,fontSize:14,cursor:"pointer"}}>✕</button>
+              </div>
+            </div>))}</div>}
+          </div>
+        </div>}
+
+        {/* ── SURVEY TAB ── */}
+        {dTab==="survey"&&<div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {SURVEY_Q.map((q,qi)=>{const v=surveyAns[q.id];const hasV=v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력");
+                return(<div key={q.id} style={{padding:"12px 14px",borderRadius:12,background:hasV?"#f7f2ee":C.card,border:`1px solid ${hasV?C.pri+"30":C.bdr}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>
+                    <span style={{fontSize:12,color:C.txtL,fontWeight:700}}>{qi+1}</span>
+                    <span style={{fontSize:15,fontWeight:700,color:C.priD}}>{q.title}</span>
+                    <span style={{fontSize:11,color:C.txtL}}>{q.id==="memo"?"자유 입력":q.multi?"복수":"1개"}</span>
+                  </div>
+                  {q.id==="memo"?<textarea defaultValue={typeof v==="string"&&v!=="직접 입력"?v:""} onChange={e=>setSurveyAns({...surveyAns,memo:e.target.value})} placeholder="상담 내용을 자유롭게 입력하세요" style={{...inp,minHeight:80,resize:"vertical",padding:"10px 12px",fontSize:14}}/>:
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {q.options.map(opt=>{const sel=q.multi?(v||[]).includes(opt):v===opt;
+                      return(<button key={opt} className="btn" onClick={()=>toggleSA(q.id,opt,q.multi)} style={{padding:"8px 14px",borderRadius:10,fontSize:14,fontWeight:sel?700:400,border:sel?"none":`1.5px solid ${C.bdr}`,background:sel?C.pri:C.card,color:sel?"white":C.txtM}}>{opt}</button>)})}
+                    {etcOpen===q.id?<div style={{display:"flex",gap:4,width:"100%",marginTop:4}}><input value={etcVal} onChange={e=>setEtcVal(e.target.value)} placeholder="직접 입력" style={{...inp,flex:1,padding:"8px 10px",fontSize:13}} autoFocus onKeyDown={e=>e.key==="Enter"&&addEtc(q.id)}/><Btn small primary onClick={()=>addEtc(q.id)} style={{padding:"8px 12px",fontSize:12}}>추가</Btn><Btn small onClick={()=>{setEtcOpen(null);setEtcVal("")}} style={{padding:"8px 10px",fontSize:12}}>취소</Btn></div>:
+                    <button className="btn" onClick={()=>setEtcOpen(q.id)} style={{padding:"8px 12px",borderRadius:10,fontSize:12,border:`1.5px dashed ${C.bdr}`,background:"transparent",color:C.txtL}}>+ 기타</button>}
+                  </div>}
+                </div>)})}
+            </div>
+            {surveyAns._date&&<div style={{fontSize:11,color:C.txtL,textAlign:"right",marginTop:6}}>작성일: {surveyAns._date}</div>}
+            <Btn primary full onClick={()=>{const missing=[];SURVEY_Q.forEach((q,i)=>{if(q.id!=="memo"){const v=surveyAns[q.id];const has=v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력");if(!has)missing.push(`${i+1}. ${q.title}`)}});if(missing.length>0){const proceed=confirm(`아래 항목이 비어있습니다:\n\n${missing.join("\n")}\n\n그래도 저장하시겠습니까?`);if(!proceed)return}try{saveSurvey(dm.id,surveyAns);alert("✅ 설문이 저장되었습니다!")}catch(e){alert("❌ 저장에 실패했습니다. 다시 시도해주세요.")}}} style={{marginTop:10,padding:"14px 0",fontSize:15}}>설문 저장</Btn>
+        </div>}
+      </>:
+
+      /* ═══ MAIN TABS (no detail) ═══ */
+      <>
+        <div style={{display:"flex",gap:3,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+          {[["members","회원"],["instructors","강사"],["records","기록"],["signatures","서명"],["sheets","동기화"]].map(([t,l])=>(<Btn key={t} small onClick={()=>{setTab(t);setVr(null)}} style={{background:tab===t?C.pri:C.card,color:tab===t?"white":C.txtM,borderColor:tab===t?C.pri:C.bdr,padding:"6px 12px",fontSize:12}}>{l}</Btn>))}
+          <div style={{flex:1}}/>
+          {(()=>{const cnt=members.filter(m=>m.status==="consult").length;return(<Btn small onClick={()=>{setTab("consult");setVr(null)}} style={{background:tab==="consult"?C.inst:C.card,color:tab==="consult"?"white":C.inst,borderColor:tab==="consult"?C.inst:C.inst,padding:"6px 12px",fontSize:12}}>비회원 상담내역{cnt>0?` (${cnt})`:""}</Btn>)})()}
+        </div>
+
+        {/* ── Members list ── */}
+        {tab==="members"&&<>
+          <Btn primary small onClick={()=>setShowAdd(!showAdd)} style={{marginBottom:8}}>+ 회원 추가</Btn>
+          {showAdd&&<div className="af" style={{background:C.priP,borderRadius:12,padding:10,marginBottom:10}}>
+            <p style={{fontSize:11,color:C.txtM,margin:"0 0 6px",fontWeight:600}}>이름 입력 후 상세 정보는 회원 상세에서 입력하세요</p>
+            <div style={{display:"flex",gap:4}}>
+              <input ref={nnRef} placeholder="이름 *" onKeyDown={e=>e.key==="Enter"&&addM()} style={{...inp,flex:2,padding:"8px 10px",fontSize:14}} autoFocus/>
+              <input ref={npRef} placeholder="연락처" onKeyDown={e=>e.key==="Enter"&&addM()} style={{...inp,flex:1,padding:"8px 10px",fontSize:13}}/>
+              <Btn primary onClick={addM} style={{padding:"8px 14px",fontSize:13,flexShrink:0}}>등록</Btn>
+            </div>
+          </div>}
+
+          {!members.length?<p style={{color:C.txtL,textAlign:"center",padding:20,fontSize:13}}>등록된 회원이 없습니다</p>:
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+            {members.filter(m=>m.status!=="inactive"&&m.status!=="consult").map(m=>{const rem=m.totalSessions-m.usedSessions;const pa=m.status==="paused";const inst=instructors.find(x=>x.id===m.instructorId);const age=m.profile?.birthYear?(new Date().getFullYear()-parseInt(m.profile.birthYear))+"세":"";const gender=m.profile?.gender||"";
+              return(<div key={m.id} className="card-act" onClick={()=>openDetail(m)} style={{padding:"10px 12px",borderRadius:10,background:pa?C.pauseBg:C.card,border:`1px solid ${pa?"#ddd":rem<=2?"#f0c4bf":C.bdr}`,borderTop:`3px solid ${m.color||C.pri}`,opacity:pa?.55:1,overflow:"hidden"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <div style={{fontWeight:800,fontSize:15,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{m.name}</div>
+                  <span style={{fontSize:16,fontWeight:900,color:rem<=2?C.danger:C.priD,marginLeft:4}}>{rem}<span style={{fontSize:10,fontWeight:600}}>회</span></span>
+                </div>
+                <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+                  {gender&&<span style={{fontSize:10,color:C.txtM,fontWeight:600,padding:"1px 5px",borderRadius:4,background:C.priP}}>{gender}</span>}
+                  {age&&<span style={{fontSize:10,color:C.txtM,fontWeight:600,padding:"1px 5px",borderRadius:4,background:C.priP}}>{age}</span>}
+                  {inst&&<span style={{fontSize:10,color:C.inst,fontWeight:600}}>{inst.name}</span>}
+                  {pa&&<span style={{fontSize:10,color:C.warn,fontWeight:700}}>홀드</span>}
+                  {m.survey&&<span style={{width:5,height:5,borderRadius:"50%",background:C.ok,display:"inline-block"}}/>}
+                </div>
+                {m.phone&&<div style={{fontSize:10,color:C.txtL,marginTop:3}}>{m.phone}</div>}
+                {m.weeklyDays?.length>0&&<div style={{fontSize:10,color:C.priD,fontWeight:600,marginTop:2}}>{m.weeklyDays.join("·")}{m.classTime?" "+m.classTime:""}</div>}
+                {m.expiryDate&&<div style={{fontSize:10,color:isExp(m.expiryDate)?C.danger:C.txtL,marginTop:2}}>만료: {fmtShort(m.expiryDate)}</div>}
+              </div>)})}
+          </div>}
+          {/* Inactive */}
+          {members.filter(m=>m.status==="inactive").length>0&&<div style={{marginTop:8}}>
+            <p style={{fontSize:11,color:C.txtL,fontWeight:700,margin:"0 0 4px"}}>비활성 ({members.filter(m=>m.status==="inactive").length})</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:4}}>{members.filter(m=>m.status==="inactive").map(m=>(<div key={m.id} className="card-act" style={{padding:"5px",borderRadius:6,background:"#f5f1ed",border:"1px solid #e0dbd6",opacity:.5,textAlign:"center"}}>
+              <div style={{fontSize:9,fontWeight:600}}>{m.name}</div>
+              <div style={{display:"flex",gap:2,justifyContent:"center",marginTop:2}}><Btn small style={{padding:"1px 4px",fontSize:7,background:C.ok,color:"white",border:"none"}} onClick={e=>{e.stopPropagation();onUpM(members.map(x=>x.id===m.id?{...x,status:"active"}:x))}}>활성</Btn><Btn small style={{padding:"1px 4px",fontSize:7,color:C.danger,borderColor:"#f0c4bf"}} onClick={e=>{e.stopPropagation();delM(m.id)}}>✕</Btn></div>
+            </div>))}</div>
+          </div>}
+        </>}
+
+        {tab==="consult"&&<div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {members.filter(m=>m.status==="consult").length===0?<p style={{color:C.txtL,textAlign:"center",padding:20,fontSize:13}}>등록된 상담 회원이 없습니다</p>:
+            members.filter(m=>m.status==="consult").map(m=>(<div key={m.id} className="ar" style={{background:C.card,borderRadius:10,padding:12,border:`1px solid ${C.bdr}`,borderLeft:`4px solid ${m.color||C.inst}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div><span style={{fontSize:14,fontWeight:800,color:C.txt}}>{m.name}</span>{m.phone&&<span style={{fontSize:11,color:C.txtL,marginLeft:6}}>{m.phone}</span>}</div>
+                <span style={{fontSize:9,color:C.txtL}}>{fmtShort(m.createdAt)}</span>
+              </div>
+              {m.profile?.consultMemo&&<div style={{fontSize:12,color:C.txtM,padding:"6px 8px",background:C.priPP,borderRadius:6,marginBottom:8,lineHeight:1.5}}>{m.profile.consultMemo}</div>}
+              <div style={{display:"flex",gap:4}}>
+                <Btn small primary onClick={()=>{if(confirm(`${m.name}님을 정식 회원으로 전환합니다`)){onUpM(members.map(x=>x.id===m.id?{...x,status:"active",totalSessions:8}:x))}}} style={{padding:"6px 12px",fontSize:11}}>회원 전환</Btn>
+                <Btn small onClick={()=>openDetail(m)} style={{padding:"6px 10px",fontSize:10,color:C.inst,borderColor:C.inst}}>상세</Btn>
+                <Btn small onClick={()=>delM(m.id)} style={{padding:"6px 10px",fontSize:10,color:C.danger,borderColor:"#f0c4bf"}}>삭제</Btn>
+              </div>
+            </div>))}
+          </div>
+        </div>}
+
+        {tab==="instructors"&&<div>
+          <div className="af" style={{background:C.instBg,borderRadius:12,padding:12,marginBottom:12}}><div style={{display:"flex",gap:6}}><input ref={newINRef} placeholder="이름" style={{...inp,flex:1}} onKeyDown={e=>e.key==="Enter"&&addI()}/><Btn primary small onClick={addI}>추가</Btn></div></div>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>{instructors.map(inst=>{const mc=members.filter(m=>m.instructorId===inst.id&&m.status==="active").length;return(<div key={inst.id} className="ar" style={{background:C.card,borderRadius:10,padding:10,border:`1px solid ${C.bdr}`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><span style={{fontSize:14,fontWeight:800}}>{inst.name}</span> <Badge color={inst.role==="원장"?C.priD:C.inst} bg={inst.role==="원장"?C.priP:C.instBg}>{inst.role}</Badge> <span style={{fontSize:12,color:C.inst}}>({mc}명)</span></div><div style={{display:"flex",gap:3}}>{mc>0&&aI.length>1&&<Btn small style={{color:C.inst,borderColor:C.inst,padding:"4px 8px",fontSize:10}} onClick={()=>setTfI(inst)}>양도</Btn>}<Btn small style={{color:C.danger,borderColor:"#f0c4bf",padding:"4px 8px",fontSize:10}} onClick={()=>delI(inst.id)}>삭제</Btn></div></div></div>)})}</div></div>}
+
+        {tab==="records"&&<div>
+          {vr&&<div style={{marginBottom:8}}><Btn small onClick={()=>setVr(null)}>← 전체</Btn><span style={{marginLeft:8,fontSize:13,fontWeight:700}}>{members.find(m=>m.id===vr)?.name}</span></div>}
+          {(()=>{
+            const src=vr?records.filter(r=>r.memberId===vr):records;
+            const sh=src.slice(-100).reverse();
+            if(!sh.length)return<div style={{textAlign:"center",padding:16,color:C.txtL,fontSize:13}}>기록 없음</div>;
+            const grouped={};sh.forEach(r=>{const d=r.date||"날짜없음";if(!grouped[d])grouped[d]=[];grouped[d].push(r)});
+            return Object.entries(grouped).map(([date,recs])=>(
+              <div key={date} style={{marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <div style={{fontSize:14,fontWeight:800,color:C.priD}}>{fmt(date)}</div>
+                  <div style={{flex:1,height:1,background:C.bdr}}/>
+                  <span style={{fontSize:11,color:C.txtL,fontWeight:600}}>{recs.length}건</span>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                  {recs.map((r,i)=>{const ns=r.type==="noshow";const sk=r.type==="skipped";const inst=instructors?.find(x=>x.id===r.instructorId);const tm=fmtT(r.timestamp);const mb=members.find(x=>x.id===r.memberId);
+                    return(<div key={r.timestamp||i} className="ar card-act" style={{animationDelay:`${i*.03}s`,padding:"10px 14px",borderRadius:10,background:ns?C.noshowBg:sk?"#f5f1ed":C.card,border:`1px solid ${ns?"#f0c4bf":sk?C.warn+"40":C.bdr}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:6,cursor:"pointer"}} onClick={()=>{if(mb)openDetail(mb)}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                          {r.memberName&&<span style={{fontSize:14,fontWeight:800,color:ns?C.noshow:C.txt}}>{r.memberName}</span>}
+                          {ns&&<span style={{fontSize:9,fontWeight:800,color:C.noshow,border:`1.5px solid ${C.noshow}`,borderRadius:4,padding:"1px 5px"}}>NO SHOW</span>}
+                          {sk&&<span style={{fontSize:9,fontWeight:700,color:C.warn,border:`1.5px solid ${C.warn}`,borderRadius:4,padding:"1px 5px"}}>SKIP</span>}
+                          {!ns&&!sk&&<span style={{fontSize:9,fontWeight:700,color:C.ok,border:`1.5px solid ${C.ok}`,borderRadius:4,padding:"1px 5px"}}>출석</span>}
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+                          {tm&&<span style={{fontSize:10,color:C.txtL}}>{tm}</span>}
+                          {inst&&<span style={{fontSize:10,color:C.inst}}>{inst.name}</span>}
+                          {r.isSubstitute&&<span style={{fontSize:8,color:C.warn,fontWeight:600}}>대강</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:3,flexShrink:0,alignItems:"center"}}>
+                        <span style={{fontSize:10,color:C.inst,fontWeight:600}}>상세 →</span>
+                        {ns&&<><button className="btn" onClick={e=>{e.stopPropagation();skipNS(r)}} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.warn}`,background:C.card,color:C.warn,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoSkip/></button><button className="btn" onClick={e=>{e.stopPropagation();delNS(r)}} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.danger}`,background:C.card,color:C.danger,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoDel/></button></>}
+                        {sk&&<button className="btn" onClick={e=>{e.stopPropagation();undoSkip(r)}} style={{width:28,height:28,borderRadius:7,border:`1.5px solid ${C.txtL}`,background:C.card,color:C.txtM,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoUndo/></button>}
+                      </div>
+                    </div>)})}
+                </div>
+              </div>))})()}
+        </div>}
+
+        {tab==="signatures"&&<div>
+          {(()=>{
+            const sigRecs=records.filter(r=>r.signature&&r.type==="attended").slice().reverse();
+            if(!sigRecs.length)return<div style={{textAlign:"center",padding:30,color:C.txtL,fontSize:13}}>서명 기록이 없습니다<br/><span style={{fontSize:11}}>회원이 서명하면 여기에 표시됩니다</span></div>;
+            const grouped={};sigRecs.forEach(r=>{const d=r.date||"날짜없음";if(!grouped[d])grouped[d]=[];grouped[d].push(r)});
+            return Object.entries(grouped).map(([date,recs])=>(
+              <div key={date} style={{marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <div style={{fontSize:13,fontWeight:800,color:C.priD}}>{fmt(date)}</div>
+                  <div style={{flex:1,height:1,background:C.bdr}}/>
+                  <span style={{fontSize:10,color:C.txtL,fontWeight:600}}>{recs.length}건</span>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:6}}>
+                  {recs.map((r,i)=>{const inst=instructors?.find(x=>x.id===r.instructorId);const tm=fmtT(r.timestamp);
+                    return(<div key={r.timestamp||i} className="ar" style={{animationDelay:`${i*.03}s`,borderRadius:10,border:`1px solid ${C.bdr}`,overflow:"hidden",background:C.card}}>
+                      <img src={r.signature} style={{width:"100%",height:80,objectFit:"contain",background:"#faf8f6",borderBottom:`1px solid ${C.bdr}`}}/>
+                      <div style={{padding:"5px 7px"}}>
+                        <div style={{fontSize:12,fontWeight:700,color:C.txt}}>{r.memberName||"?"}</div>
+                        <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+                          {tm&&<span style={{fontSize:9,color:C.txtL}}>{tm}</span>}
+                          {inst&&<span style={{fontSize:9,color:C.inst}}>{inst.name}</span>}
+                          {r.isSubstitute&&<span style={{fontSize:8,color:C.warn,fontWeight:600}}>대강</span>}
+                        </div>
+                      </div>
+                    </div>)})}
+                </div>
+              </div>))})()}
+        </div>}
+
+        {tab==="sheets"&&<div className="af" style={{background:C.priP,borderRadius:14,padding:18,textAlign:"center"}}><SyncDot s={sync}/><p style={{fontSize:13,color:C.txtM,margin:"10px 0"}}>구글 스프레드시트 동기화</p><Btn primary full style={{padding:"14px 0",fontSize:15}} onClick={onSync}>동기화</Btn><div style={{marginTop:12,padding:"10px",background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,wordBreak:"break-all"}}><p style={{fontSize:10,color:C.txtL,margin:"0 0 4px",fontWeight:700}}>스프레드시트 연결 주소</p><a href={GS} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:C.inst,textDecoration:"underline"}}>{GS}</a></div></div>}
+      </>}
+
+      {pm&&<PauseModal mb={pm} onOk={r=>pauseM(pm.id,r)} onNo={()=>setPm(null)}/>}
+      {tfI&&<TransferModal members={members} instructors={instructors} from={tfI} onOk={hTf} onNo={()=>setTfI(null)}/>}
+      {renM&&<RenewModal mb={renM} onOk={d=>hRenew(renM,d)} onNo={()=>setRenM(null)}/>}
+  </div>)
+}
+
+/* Consult Modal — All-at-once Survey */
+function ConsultModal({onSave,onClose}){
+  const[name,setName]=useState("");const[phone,setPhone]=useState("");
+  const[ans,setAns]=useState(()=>{const s={};SURVEY_Q.forEach(q=>{s[q.id]=q.multi?[]:""});s._etc={};return s});
+  const[etcOpen,setEtcOpen]=useState(null);const[etcVal,setEtcVal]=useState("");
+  const toggle=(qid,opt,multi)=>{if(multi){const cur=ans[qid]||[];if(opt==="없음")setAns({...ans,[qid]:cur.includes("없음")?[]:["없음"]});else setAns({...ans,[qid]:cur.includes(opt)?cur.filter(x=>x!==opt):cur.filter(x=>x!=="없음").concat(opt)})}else setAns({...ans,[qid]:ans[qid]===opt?"":opt})};
+  const addEtcFn=(qid)=>{if(!etcVal.trim())return;const v="기타: "+etcVal.trim();const q=SURVEY_Q.find(x=>x.id===qid);if(q.multi){const cur=ans[qid]||[];if(!cur.includes(v))setAns({...ans,[qid]:[...cur,v],_etc:{...ans._etc,[qid]:etcVal.trim()}})}else setAns({...ans,[qid]:v,_etc:{...ans._etc,[qid]:etcVal.trim()}});setEtcVal("");setEtcOpen(null)};
+  const isAnswered=(qid)=>{const v=ans[qid];return v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력")};
+  const handleSave=()=>{
+    if(!name.trim()){alert("이름을 입력하세요");return}
+    const missing=[];SURVEY_Q.forEach((q,i)=>{if(q.id!=="memo"&&!isAnswered(q.id))missing.push(`${i+1}. ${q.title}`)});
+    if(missing.length>0){const proceed=confirm(`아래 항목이 비어있습니다:\n\n${missing.join("\n")}\n\n그래도 저장하시겠습니까?`);if(!proceed)return}
+    try{onSave(name.trim(),phone.trim(),(ans.memo&&ans.memo!=="직접 입력"?ans.memo:""),ans);alert("✅ 상담 설문이 저장되었습니다!")}catch(e){alert("❌ 저장에 실패했습니다. 다시 시도해주세요.")}
+  };
+  return(<div style={{...ovl,zIndex:160}} onClick={onClose}><div className="as" style={{...modal,maxWidth:600,maxHeight:"90vh",overflow:"auto",position:"relative"}} onClick={e=>e.stopPropagation()}>
+    {/* 닫기 X 버튼 - 고정 */}
+    <button onClick={onClose} style={{position:"sticky",top:0,float:"right",width:36,height:36,borderRadius:"50%",border:`1.5px solid ${C.bdr}`,background:C.card,fontSize:18,cursor:"pointer",color:C.txtL,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10,boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>✕</button>
+    <h3 style={{margin:"0 0 14px",fontSize:18,fontWeight:800,color:C.txt}}>상담 설문</h3>
+    {/* 기본 정보 */}
+    <div style={{background:C.priPP,borderRadius:12,padding:12,marginBottom:16}}>
+      <p style={{fontSize:13,fontWeight:800,color:C.priD,margin:"0 0 8px"}}>기본 정보</p>
+      <div style={{display:"flex",gap:6}}>
+        <input value={name} onChange={e=>setName(e.target.value)} placeholder="이름 *" style={{...inp,flex:2,padding:"10px 12px",fontSize:14}} autoFocus/>
+        <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="연락처" style={{...inp,flex:1,padding:"10px 12px",fontSize:14}}/>
+      </div>
+    </div>
+    {/* 전체 설문 항목 */}
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      {SURVEY_Q.map((q,qi)=>{const v=ans[q.id];const hasV=v&&(Array.isArray(v)?v.length>0:v!==""&&v!=="직접 입력");
+        return(<div key={q.id} style={{padding:"8px 10px",borderRadius:10,background:hasV?"#f7f2ee":C.card,border:`1px solid ${hasV?C.pri+"30":C.bdr}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4}}>
+            <span style={{fontSize:9,color:C.txtL,fontWeight:700}}>{qi+1}</span>
+            <span style={{fontSize:12,fontWeight:700,color:C.priD}}>{q.title}</span>
+            <span style={{fontSize:9,color:C.txtL}}>{q.id==="memo"?"자유 입력":q.multi?"복수":"1개"}</span>
+          </div>
+          {q.id==="memo"?<textarea value={typeof v==="string"&&v!=="직접 입력"?v:""} onChange={e=>setAns({...ans,memo:e.target.value})} placeholder="상담 내용을 자유롭게 입력하세요" style={{...inp,minHeight:60,resize:"vertical",padding:"6px 8px",fontSize:12}}/>:
+          <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+            {q.options.map(opt=>{const sel=q.multi?(v||[]).includes(opt):v===opt;
+              return(<button key={opt} className="btn" onClick={()=>toggle(q.id,opt,q.multi)} style={{padding:"4px 9px",borderRadius:7,fontSize:11,fontWeight:sel?700:400,border:sel?"none":`1px solid ${C.bdr}`,background:sel?C.pri:C.card,color:sel?"white":C.txtM}}>{opt}</button>)})}
+            {etcOpen===q.id?<div style={{display:"flex",gap:3,width:"100%",marginTop:2}}><input value={etcVal} onChange={e=>setEtcVal(e.target.value)} placeholder="직접 입력" style={{...inp,flex:1,padding:"4px 8px",fontSize:11}} autoFocus onKeyDown={e=>e.key==="Enter"&&addEtcFn(q.id)}/><Btn small primary onClick={()=>addEtcFn(q.id)} style={{padding:"4px 8px",fontSize:10}}>추가</Btn><Btn small onClick={()=>{setEtcOpen(null);setEtcVal("")}} style={{padding:"4px 6px",fontSize:10}}>취소</Btn></div>:
+            <button className="btn" onClick={()=>setEtcOpen(q.id)} style={{padding:"4px 8px",borderRadius:7,fontSize:10,border:`1px dashed ${C.bdr}`,background:"transparent",color:C.txtL}}>+ 기타</button>}
+          </div>}
+        </div>)})}
+    </div>
+    {/* 저장 / 취소 */}
+    <div style={{display:"flex",gap:8,marginTop:20,position:"sticky",bottom:0,background:C.card,padding:"12px 0",borderTop:`1px solid ${C.bdr}`}}>
+      <Btn style={{flex:1}} onClick={onClose}>취소</Btn>
+      <Btn primary style={{flex:2,padding:"14px 0",fontSize:15}} onClick={handleSave}>상담 설문 저장</Btn>
+    </div>
+  </div></div>)}
+
+/* ═══ APP ═══ */
+function App(){
+  const[auth,setAuth]=useState(()=>sessionStorage.getItem("ode-auth")==="1");
+  const[dark,setDark]=useState(()=>localStorage.getItem("ode-dark")==="1");
+  C=dark?CD:CL;
+  const toggleDark=()=>{const nd=!dark;setDark(nd);localStorage.setItem("ode-dark",nd?"1":"0")};
+  const[members,setMembers]=useState([]);const[records,setRecords]=useState([]);const[instructors,setInstructors]=useState([]);
+  const[sel,setSel]=useState(null);const[screen,setScreen]=useState("select");const[adminOpen,setAdminOpen]=useState(false);
+  const[loading,setLoading]=useState(true);const[loadMsg]=useState("구글 스프레드시트 동기화 중...");
+  const[search,setSearch]=useState("");const[sortBy,setSortBy]=useState("expiry");const[filterI,setFilterI]=useState("all");
+  const[sync,setSync]=useState("idle");const[histM,setHistM]=useState(null);const[signI,setSignI]=useState(null);const[surveyMb,setSurveyMb]=useState(null);
+  const[calOpen,setCalOpen]=useState(false);const[consultOpen,setConsultOpen]=useState(false);
+
+  const save=useCallback((m,r,i)=>{LS.set("ode-m",m);LS.set("ode-r",r);LS.set("ode-i",i);setTimeout(()=>pushG(GS,m,r,i),50)},[]);
+
+  /* ── 연장 자동 적용 ── */
+  const applyRenewals=useCallback((mList)=>{
+    let changed=false;
+    const updated=mList.map(m=>{
+      if(!m.pendingRenewal)return m;
+      const rem=m.totalSessions-m.usedSessions;
+      if(rem<=0){
+        changed=true;
+        const pr=m.pendingRenewal;
+        const newFirst=pr.startDate||td();
+        const newExp=cExp(newFirst,pr.sessions,pr.weeklyDays||m.weeklyDays);
+        return{...m,totalSessions:pr.sessions,usedSessions:0,weeklyDays:pr.weeklyDays||m.weeklyDays,firstClassDate:newFirst,expiryDate:newExp,pendingRenewal:null,pausedDays:0};
+      }
+      return m;
+    });
+    return{members:updated,changed};
+  },[]);
+
+  const upM=useCallback(nm=>{const{members:final,changed}=applyRenewals(nm);setMembers(final);save(final,records,instructors)},[records,instructors,save,applyRenewals]);
+  const saveSurvey=(mid,data)=>{const nm=members.map(m=>m.id===mid?{...m,survey:data}:m);setMembers(nm);save(nm,records,instructors)};
+  const upR=useCallback(nr=>{setRecords(nr);save(members,nr,instructors)},[members,instructors,save]);
+  const upI=useCallback(ni=>{setInstructors(ni);save(members,records,ni)},[members,records,save]);
+
+  const fullSync=useCallback(async(lm,lr,li)=>{setSync("syncing");const g=await pullG(GS);if(g?.success){const gm=g.members||[],gr=g.records||[],gi=g.instructors||[];const gIds=new Set(gm.map(x=>x.id));const fm=[...gm,...lm.filter(x=>!gIds.has(x.id))];const gTs=new Set(gr.map(x=>x.timestamp));const fr=[...gr,...lr.filter(x=>x.timestamp&&!gTs.has(x.timestamp))];const gI=new Set(gi.map(x=>x.id));const fi=[...gi,...li.filter(x=>!gI.has(x.id))];
+    /* 동기화 후 연장 자동 적용 */
+    let changed=false;const finalM=fm.map(m=>{if(!m.pendingRenewal)return m;const rem=m.totalSessions-m.usedSessions;if(rem<=0){changed=true;const pr=m.pendingRenewal;const newFirst=pr.startDate||td();const newExp=cExp(newFirst,pr.sessions,pr.weeklyDays||m.weeklyDays);return{...m,totalSessions:pr.sessions,usedSessions:0,weeklyDays:pr.weeklyDays||m.weeklyDays,firstClassDate:newFirst,expiryDate:newExp,pendingRenewal:null,pausedDays:0}}return m});
+    setMembers(finalM);setRecords(fr);setInstructors(fi);LS.set("ode-m",finalM);LS.set("ode-r",fr);LS.set("ode-i",fi);await pushG(GS,finalM,fr,fi);setSync("success");setTimeout(()=>setSync("idle"),3000);return{m:finalM,r:fr,i:fi}}setSync("error");setTimeout(()=>setSync("idle"),3000);return{m:lm,r:lr,i:li}},[]);
+
+  useEffect(()=>{if(!auth){setLoading(false);return}setLoading(true);const lm=LS.get("ode-m")||[],lr=LS.get("ode-r")||[],li=LS.get("ode-i")||[];
+    /* 로드 시 연장 자동 적용 */
+    let initM=lm;initM=initM.map(m=>{if(!m.pendingRenewal)return m;const rem=m.totalSessions-m.usedSessions;if(rem<=0){const pr=m.pendingRenewal;const newFirst=pr.startDate||td();const newExp=cExp(newFirst,pr.sessions,pr.weeklyDays||m.weeklyDays);return{...m,totalSessions:pr.sessions,usedSessions:0,weeklyDays:pr.weeklyDays||m.weeklyDays,firstClassDate:newFirst,expiryDate:newExp,pendingRenewal:null,pausedDays:0}}return m});
+    setMembers(initM);setRecords(lr);setInstructors(li);LS.set("ode-m",initM);fullSync(initM,lr,li).then(()=>setLoading(false)).catch(()=>setLoading(false))},[auth]);
+  const manualSync=useCallback(()=>{fullSync(members,records,instructors)},[members,records,instructors,fullSync]);
+
+  const skipNS=r=>{const nr=records.map(x=>x.timestamp===r.timestamp?{...x,type:"skipped"}:x);const nm=members.map(m=>m.id===r.memberId?{...m,usedSessions:Math.max(0,m.usedSessions-1)}:m);setRecords(nr);setMembers(nm);save(nm,nr,instructors);setHistM(p=>p?nm.find(m=>m.id===p.id)||p:p)};
+  const undoSkip=r=>{if(!confirm("스킵 취소 → 노쇼 복원"))return;const nr=records.map(x=>x.timestamp===r.timestamp?{...x,type:"noshow"}:x);const nm=members.map(m=>m.id===r.memberId?{...m,usedSessions:m.usedSessions+1}:m);setRecords(nr);setMembers(nm);save(nm,nr,instructors);setHistM(p=>p?nm.find(m=>m.id===p.id)||p:p)};
+  const delNS=r=>{if(!confirm("삭제 + 횟수 복원"))return;const nr=records.filter(x=>x.timestamp!==r.timestamp);const nm=members.map(m=>m.id===r.memberId?{...m,usedSessions:Math.max(0,m.usedSessions-1)}:m);setRecords(nr);setMembers(nm);save(nm,nr,instructors);setHistM(p=>p?nm.find(m=>m.id===p.id)||p:p)};
+  const delNSStamp=r=>{const nr=records.filter(x=>x.timestamp!==r.timestamp);const nm=members.map(m=>m.id===r.memberId?{...m,usedSessions:Math.max(0,m.usedSessions-1)}:m);setRecords(nr);setMembers(nm);save(nm,nr,instructors);setSel(p=>p?nm.find(m=>m.id===p.id)||p:p);setHistM(p=>p?nm.find(m=>m.id===p.id)||p:p)};
+  const delRecord=r=>{if(!confirm(`${fmt(r.date)} ${r.type==="attended"?"출석":r.type==="noshow"?"노쇼":"스킵"} 기록을 삭제합니다.\n사용횟수도 1회 복구됩니다.`))return;const isUsed=r.type==="attended"||r.type==="noshow";const nr=records.filter(x=>x.timestamp!==r.timestamp);const nm=isUsed?members.map(m=>m.id===r.memberId?{...m,usedSessions:Math.max(0,m.usedSessions-1)}:m):members;setRecords(nr);setMembers(nm);save(nm,nr,instructors)};
+  const hNS=mid=>{const m=members.find(x=>x.id===mid);if(!m)return;const isF=m.usedSessions===0&&!m.firstClassDate;let um;if(isF){const exp=cExp(td(),m.totalSessions,m.weeklyDays);um=members.map(x=>x.id===m.id?{...x,usedSessions:x.usedSessions+1,firstClassDate:td(),expiryDate:exp}:x)}else um=members.map(x=>x.id===m.id?{...x,usedSessions:x.usedSessions+1}:x);
+    /* 연장 자동 적용 */
+    const{members:finalM}=applyRenewals(um);
+    const nr=[...records,{memberId:m.id,memberName:m.name,date:td(),type:"noshow",signature:null,instructorId:m.instructorId,isSubstitute:false,timestamp:new Date().toISOString()}];setMembers(finalM);setRecords(nr);save(finalM,nr,instructors);setSel(finalM.find(x=>x.id===m.id))};
+  const hSign=sig=>{const m=members.find(x=>x.id===sel.id);if(!m)return;const isF=m.usedSessions===0&&!m.firstClassDate;let um;if(isF){const exp=cExp(td(),m.totalSessions,m.weeklyDays);um=members.map(x=>x.id===m.id?{...x,usedSessions:x.usedSessions+1,firstClassDate:td(),expiryDate:exp}:x)}else um=members.map(x=>x.id===m.id?{...x,usedSessions:x.usedSessions+1}:x);
+    /* 연장 자동 적용 */
+    const{members:finalM}=applyRenewals(um);
+    const aId=signI||m.instructorId;const sub=aId&&aId!==m.instructorId;const nr=[...records,{memberId:m.id,memberName:m.name,date:td(),type:"attended",signature:sig,instructorId:aId||null,isSubstitute:sub,timestamp:new Date().toISOString()}];setMembers(finalM);setRecords(nr);save(finalM,nr,instructors);setSel(finalM.find(x=>x.id===m.id));setScreen("result");setSignI(null)};
+  const goHome=()=>{setScreen("select");setSel(null);setSearch("");setSignI(null);setCalOpen(false);setAdminOpen(false);setConsultOpen(false)};
+  const logout=()=>{sessionStorage.removeItem("ode-auth");setAuth(false)};
+  const addConsult=(name,phone,memo,surveyData)=>{const id=Date.now().toString();const nm={id,name,phone,totalSessions:0,usedSessions:0,weeklyDays:[],firstClassDate:null,expiryDate:null,status:"consult",pauseReason:null,pauseStartDate:null,pausedDays:0,instructorId:null,color:MCOL[Math.floor(Math.random()*MCOL.length)],classTime:null,room:"",scheduleOverrides:[],renewals:[],createdAt:td(),profile:{consultMemo:memo},payments:[],survey:surveyData?{...surveyData,_date:td()}:null};upM([...members,nm]);setConsultOpen(false)};
+
+  if(!auth)return<LoginScreen onLogin={()=>setAuth(true)}/>;
+  if(loading)return<LoadingGate msg={loadMsg}/>;
+
+  const active=members.filter(m=>m.status==="active"),paused=members.filter(m=>m.status==="paused"),inactive=members.filter(m=>m.status==="inactive"),consult=members.filter(m=>m.status==="consult");
+  const aI=instructors.filter(x=>x.status==="active");
+  const sorted=[...active].sort((a,b)=>{if(sortBy==="expiry"){if(!a.expiryDate&&!b.expiryDate)return 0;if(!a.expiryDate)return 1;if(!b.expiryDate)return-1;return new Date(a.expiryDate)-new Date(b.expiryDate)}if(sortBy==="name")return a.name.localeCompare(b.name,"ko");if(sortBy==="remaining")return(a.totalSessions-a.usedSessions)-(b.totalSessions-b.usedSessions);return 0});
+  const filtered=sorted.filter(m=>m.name.includes(search)).filter(m=>filterI==="all"||m.instructorId===filterI);
+
+  return(<div className={`app-wrap${dark?" dark-mode":""}`} style={{minHeight:"100vh",background:C.bg}}>
+    <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.bdr}`,background:dark?"rgba(255,255,255,.95)":"rgba(255,255,255,.75)",backdropFilter:"blur(10px)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:4,position:"sticky",top:0,zIndex:50}}>
+      <div style={{display:"flex",alignItems:"center",gap:6}}>{(screen!=="select"||calOpen||adminOpen)&&<Btn small onClick={goHome} style={{padding:"5px 8px",flexShrink:0}}>←</Btn>}<span style={{fontSize:13,fontWeight:900,color:C.priD,letterSpacing:2}}>ODE TO PILATES</span></div>
+      <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
+        <SyncDot s={sync}/>
+        {screen==="select"&&!calOpen&&!adminOpen&&<button className="btn" onClick={()=>setCalOpen(true)} style={{width:32,height:32,borderRadius:9,border:`1.5px solid ${C.bdr}`,background:C.card,color:C.inst,display:"flex",alignItems:"center",justifyContent:"center"}}><IcoCal sz={16}/></button>}
+        {!adminOpen&&<Btn small onClick={()=>{setAdminOpen(true);setCalOpen(false);setScreen("select")}} style={{padding:"5px 12px",fontSize:11}}>관리</Btn>}
+        <div style={{width:1,height:20,background:C.bdr,margin:"0 2px"}}/>
+        <button className="btn" onClick={toggleDark} style={{width:28,height:28,borderRadius:8,border:`1px solid ${C.bdr}`,background:C.card,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:C.txtM}}>{dark?<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path d="M12 3a9 9 0 010 18" fill="currentColor"/></svg>:<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path d="M12 3a9 9 0 000 18" fill="currentColor"/></svg>}</button>
+        <Btn small onClick={logout} style={{padding:"5px 8px",fontSize:10,color:C.txtL}}>로그아웃</Btn>
+      </div>
+    </div>
+    <div style={{padding:"14px 12px",minHeight:"calc(100vh - 56px)",display:"flex",flexDirection:"column"}}>
+      {calOpen&&screen==="select"&&!adminOpen&&<Calendar members={members} records={records} instructors={instructors} onUpM={upM}/>}
+      {adminOpen&&<Admin members={members} records={records} instructors={instructors} onUpM={upM} onUpR={upR} onUpI={upI} sync={sync} onSync={manualSync} skipNS={skipNS} undoSkip={undoSkip} delNS={delNS} delRecord={delRecord}/>}
+      {screen==="select"&&!calOpen&&!adminOpen&&<div className="af" style={{flex:1}}>
+        <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
+          <span style={{fontFamily:"'Dancing Script',cursive",fontSize:22,fontWeight:700,color:C.priD,letterSpacing:1}}>Signature</span>
+          <span style={{fontSize:13,fontWeight:700,color:C.txtL}}>서명 관리</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+          <input placeholder="검색" value={search} onChange={e=>setSearch(e.target.value)} style={{...inp,padding:"6px 8px",fontSize:12,width:80,flex:"none"}}/>
+          <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"6px 8px",borderRadius:8,border:`1px solid ${C.bdr}`,fontSize:10,background:C.card,color:C.txt}}><option value="expiry">만료임박</option><option value="name">가나다</option><option value="remaining">잔여적은</option></select>
+          {aI.length>0&&aI.map(x=>(<Btn key={x.id} small onClick={()=>setFilterI(filterI===x.id?"all":x.id)} style={{padding:"4px 8px",fontSize:9,background:filterI===x.id?C.inst:C.card,color:filterI===x.id?"white":C.txtL,borderColor:filterI===x.id?C.inst:C.bdr}}>{x.name}</Btn>))}
+          <div style={{flex:1}}/>
+          <Btn small onClick={()=>setConsultOpen(true)} style={{padding:"6px 10px",fontSize:10,background:C.instBg,color:C.inst,borderColor:C.inst}}>+ 상담</Btn>
+        </div>
+        {!members.filter(m=>m.status==="active").length?<p style={{color:C.txtM,fontSize:13,textAlign:"center",padding:20}}>등록된 회원이 없습니다</p>:
+        <><div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>
+          {filtered.map((m,i)=>{const rem=m.totalSessions-m.usedSessions;const exp=isExp(m.expiryDate);const hasPR=!!m.pendingRenewal;const off=(rem<=0||exp)&&!hasPR;const days=dLeft(m.expiryDate);const inst=instructors.find(x=>x.id===m.instructorId);
+          return(<div key={m.id} className="ar card-act" style={{animationDelay:`${i*.02}s`,aspectRatio:"1",borderRadius:10,border:`1px solid ${off?"#f0c4bf":C.bdr}`,overflow:"hidden",background:off?"#FDF5F3":C.card,opacity:off?.35:1,borderTop:`3px solid ${m.color||C.pri}`,display:"flex",flexDirection:"column",padding:"6px 5px",position:"relative"}} onClick={()=>{if(off)return;setSel(m);setSignI(m.instructorId||null);setScreen("sign")}}>
+            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",fontFamily:"'Dancing Script',cursive",fontSize:22,color:m.color||C.pri,opacity:.12,fontWeight:700,letterSpacing:2,pointerEvents:"none",whiteSpace:"nowrap"}}>Signature</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div style={{fontWeight:800,fontSize:22,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{m.name}</div>
+              <div style={{padding:"0 4px",borderRadius:4,background:rem<=2?C.dangerBg:C.priP,flexShrink:0}}><span style={{fontSize:22,fontWeight:900,color:rem<=2?C.danger:C.priD}}>{rem}</span></div>
+            </div>
+            <div style={{fontSize:16,color:C.txtM,fontWeight:600}}>{rem}/{m.totalSessions}회</div>
+            {m.weeklyDays?.length>0&&<div style={{fontSize:14,color:C.priD,fontWeight:700,marginTop:1}}>{m.weeklyDays.join("·")}{m.classTime?" "+m.classTime:""}</div>}
+            <div style={{flex:1}}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+              <div>{inst&&<span style={{fontSize:12,color:C.inst,fontWeight:600}}>{inst.name}</span>}</div>
+              <div style={{display:"flex",gap:2}}>
+                <button className="btn" onClick={e=>{e.stopPropagation();setSurveyMb(m)}} style={{width:22,height:22,borderRadius:4,border:`1px solid ${C.bdr}`,background:C.card,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}><IcoSurvey sz={11}/>{m.survey&&<span style={{position:"absolute",top:-1,right:-1,width:5,height:5,borderRadius:"50%",background:C.ok}}/>}</button>
+                <button className="btn" onClick={e=>{e.stopPropagation();setHistM(m)}} style={{width:22,height:22,borderRadius:4,border:`1px solid ${C.bdr}`,background:C.card,display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke={C.txtL} strokeWidth="1.5"/></svg></button>
+              </div>
+            </div>
+            {m.expiryDate&&!exp&&days!==null&&days<=14&&<div style={{fontSize:12,color:days<=7?C.danger:C.warn,fontWeight:700,marginTop:1}}>D-{days}</div>}
+          </div>)})}
+        </div>
+        {paused.length>0&&<div style={{marginTop:14}}><p style={{fontSize:12,color:C.txtM,fontWeight:700,margin:"0 0 5px"}}>홀드</p><div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>{paused.map(m=>(<div key={m.id} style={{padding:"6px 5px",borderRadius:8,background:C.pauseBg,border:"1px solid #ddd",textAlign:"center"}}><span style={{fontSize:11,fontWeight:700,color:C.pauseTxt}}>{m.name}</span><div><Badge color={C.warn} bg={C.warnBg}>홀드</Badge></div></div>))}</div></div>}</>}
+      </div>}
+      {screen==="sign"&&sel&&<div className="af" style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",maxWidth:600,margin:"0 auto",width:"100%"}}>
+        <div style={{textAlign:"center",marginBottom:10}}><p style={{fontSize:18,fontWeight:800,color:C.txt,margin:"0 0 4px"}}>{sel.name} <span style={{fontWeight:400,color:C.txtL,fontSize:14}}>회원님</span></p><p style={{fontSize:13,color:C.txtM,margin:0}}>{fmt(td())} 수업 확인</p></div>
+        <StampBar total={sel.totalSessions} used={sel.usedSessions} records={records} memberId={sel.id} onDeleteNS={delNSStamp} pendingRenewal={sel.pendingRenewal}/>
+        <div style={{display:"flex",gap:8,marginBottom:6}}><div style={{flex:1,background:C.priP,borderRadius:14,padding:"8px",textAlign:"center",border:`1.5px solid ${C.bdr}`}}><div style={{fontSize:10,color:C.txtL}}>잔여</div><div style={{fontSize:22,fontWeight:900,color:(sel.totalSessions-sel.usedSessions)<=2?C.danger:C.priD,lineHeight:1}}>{sel.totalSessions-sel.usedSessions}<span style={{fontSize:10}}>회</span></div></div><div style={{flex:1.3,background:C.priP,borderRadius:14,padding:"8px",textAlign:"center",border:`1.5px solid ${C.bdr}`}}><div style={{fontSize:10,color:C.txtL}}>유효기간</div><div style={{fontSize:12,fontWeight:700,color:isExp(sel.expiryDate)?C.danger:C.txt}}>{isExp(sel.expiryDate)?"만료":sel.expiryDate?fmtShort(sel.expiryDate):"미정"}</div></div></div>
+        {aI.length>1&&<SubSelect instructors={instructors} mid={sel.id} members={members} value={signI} onChange={setSignI}/>}
+        <div style={{margin:"6px 0"}}><SigPad onSave={hSign} onCancel={goHome}/></div>
+        <div style={{textAlign:"center",marginTop:4}}><button className="btn" onClick={()=>{if(confirm(`${sel.name} 회원님을 노쇼 처리합니다`)){hNS(sel.id);setScreen("result")}}} style={{padding:"8px 20px",borderRadius:10,border:`2px solid ${C.noshow}`,background:C.noshowBg,color:C.noshow,fontSize:12,fontWeight:700}}>NO SHOW 처리</button></div>
+      </div>}
+      {screen==="result"&&sel&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:"100%",maxWidth:500}}><ResultScreen mb={sel} records={records} onDone={goHome}/></div></div>}
+    </div>
+    <div style={{textAlign:"center",padding:"6px 0 12px",fontSize:10,color:C.priL,fontWeight:700,letterSpacing:3}}>ODE TO PILATES <span style={{letterSpacing:0,fontSize:9,opacity:.6}}>v1.6</span></div>
+    {histM&&<HistModal mb={histM} records={records} instructors={instructors} onClose={()=>setHistM(null)} onSkip={skipNS} onUndoSkip={undoSkip} onDel={delNS} onDeleteNS={delNSStamp}/>}
+    {surveyMb&&<SurveyModal mb={surveyMb} readOnly={!!surveyMb.survey} onSave={data=>{saveSurvey(surveyMb.id,data);setSurveyMb(null)}} onClose={()=>setSurveyMb(null)}/>}
+    {consultOpen&&<ConsultModal onSave={addConsult} onClose={()=>setConsultOpen(false)}/>}
+  </div>)
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
